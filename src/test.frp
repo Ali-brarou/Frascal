@@ -1,0 +1,17 @@
+TDO
+    z: booleen
+    x: entier
+    y: entier 
+    w: booleen  
+debut
+    z := vrai
+    x := 32 
+    y := 32 
+    x := 3 DIV 32
+    si (vrai) alors 
+        x := 3
+    sinon 
+        x := 4
+    finsi
+    y := x
+fin

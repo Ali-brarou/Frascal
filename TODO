@@ -1,0 +1,9 @@
+work on semantic analysis 
+
+complete the language grammar 
+
+complete llvm ir generation 
+
+add tests
+
+add optimization and generate binary 
