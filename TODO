@@ -1,6 +1,8 @@
-work on semantic analysis 
+compete code gen for operations 
 
 complete the language grammar 
+
+codegen code is a mess
 
 complete llvm ir generation 
 

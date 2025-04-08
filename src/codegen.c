@@ -6,9 +6,11 @@ static LLVMBuilderRef builder;
 
 static Symbol_table* sym_tab; 
 
-// note: both code_gen_id and code_gen_exp can take id_node as input but 
-// first one returns a pointer for assignment and the other retunrs a value for expressions
+// note: both code_gen_id and code_gen_exp can take id_node as input 
+//      first one returns a pointer for assignment 
+//      and the other retunrs a value for expressions
 static LLVMTypeRef val_type_to_llvm_type(Value_type val_type); 
+static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type); 
 static void populate_sym_table(AST_node* decls); 
 static void code_gen_stmt(AST_node* root); 
 static void code_gen_if_stmt(AST_node* root); 
@@ -19,7 +21,7 @@ static LLVMValueRef code_gen_exp(AST_node* root);
 void code_gen_init()
 {
     //init llvm 
-    module = LLVMModuleCreateWithName("test_module"); 
+    module = LLVMModuleCreateWithName("main_module"); 
     builder = LLVMCreateBuilder(); 
 
     //set up the symbol table 
@@ -44,15 +46,30 @@ static LLVMTypeRef val_type_to_llvm_type(Value_type val_type)
             return LLVMInt32Type(); 
         case VAL_FLOAT: 
             return LLVMFloatType(); 
-            break; 
         case VAL_BOOL: 
             return LLVMInt1Type(); 
-            break; 
         default: 
             fprintf(stderr, "Error: unkown type\n"); 
             exit(3); 
     }
     return NULL; 
+}
+
+static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type)
+{
+    if (val_type != dest_type)
+    {
+        switch (dest_type) 
+        {
+            case VAL_FLOAT: 
+                return LLVMBuildSIToFP(builder, value, LLVMFloatType(), "casted_float"); 
+            break; 
+            default: 
+                fprintf(stderr, "cant cast this node\n"); 
+                exit(3); 
+        }
+    }
+    return value; 
 }
 
 static void populate_sym_table(AST_node* decls)
@@ -74,6 +91,10 @@ static void populate_sym_table(AST_node* decls)
             case VAL_BOOL:
                 id_alloca = LLVMBuildAlloca(builder, LLVMInt1Type(), id_node -> id_str); 
             break; 
+            default: 
+                fprintf(stderr, "Error: bad expression node\n"); 
+                exit(3); 
+            break; 
         }
         if (st_insert(sym_tab, id_node -> id_str, decl_node -> id_type, id_alloca))
         {
@@ -83,28 +104,59 @@ static void populate_sym_table(AST_node* decls)
     }
 }
 
-
+// resolve types first then cast left and right nodes if needed then do the operations
 static LLVMValueRef code_gen_op(AST_node* root)
 {
     if (root == NULL)
         return NULL; 
+
     AST_op_node* node = (AST_op_node*) root;
+
     LLVMValueRef left = code_gen_exp(node -> lhs); 
     LLVMValueRef right = code_gen_exp(node -> rhs); 
+     
+    Value_type left_node_type =  ast_exp_val_type(node -> lhs); 
+    Value_type right_node_type =  ast_exp_val_type(node -> rhs); 
+
+    //resolve types
+    Value_type node_val_type = type_resolve_op(left_node_type, right_node_type, node -> op_type) ; 
+    node -> val_type = node_val_type; 
+
+    //cast left and right
+    LLVMValueRef cleft = cast_if_needed(left,  left_node_type, node_val_type); 
+    LLVMValueRef cright = cast_if_needed(right,  right_node_type, node_val_type); 
+    
+    //do the operation 
     switch (node -> op_type)
     {
         case OP_ADD: 
-            return LLVMBuildAdd(builder, left, right, "addtmp"); 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFAdd(builder, cleft, cright, "addtmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildAdd(builder, cleft, cright, "faddtmp"); 
+            break; 
         case OP_SUB: 
-            return LLVMBuildSub(builder, left, right, "subtmp"); 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFSub(builder, cleft, cright, "subtmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildSub(builder, cleft, cright, "fsubtmp"); 
+            break; 
         case OP_MUL: 
-            return LLVMBuildMul(builder, left, right, "multmp"); 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFMul(builder, cleft, cright, "multmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildMul(builder, cleft, cright, "fmultmp"); 
+            break; 
+        case OP_DIV: 
+            return LLVMBuildFMul(builder, cleft, cright, "multmp"); 
         case OP_IDIV: 
-            return LLVMBuildSDiv(builder, left, right, "idivtmp"); 
+            return LLVMBuildSDiv(builder, cleft, cright, "idivtmp"); 
+        case OP_MOD: 
+            return LLVMBuildSRem(builder, cleft, cright, "modtmp"); 
         case OP_UMIN: 
-            return LLVMBuildNeg(builder, left, "negtmp"); 
+            return LLVMBuildNeg(builder, cleft, "negtmp"); 
         default: 
-            fprintf(stderr, "Error: bad node not an operation for now only intiger operations\n"); 
+            fprintf(stderr, "Error: bad node not an operation for now only integer operations\n"); 
             exit(3); 
             
     }
@@ -112,6 +164,7 @@ static LLVMValueRef code_gen_op(AST_node* root)
 }
 
 
+//also include type resolution
 static LLVMValueRef code_gen_exp(AST_node* root)
 {
     if (root == NULL)
@@ -133,6 +186,10 @@ static LLVMValueRef code_gen_exp(AST_node* root)
                     case VAL_BOOL: 
                         const_ret = LLVMConstInt(LLVMInt1Type(), node -> value.bval, false); 
                     break; 
+                    default: 
+                        fprintf(stderr, "bad expression node\n"); 
+                        exit(3); 
+                    break; 
                 }
                 return const_ret; 
             }
@@ -145,6 +202,9 @@ static LLVMValueRef code_gen_exp(AST_node* root)
                     fprintf(stderr, "Error: %s is not declared\n", node -> id_str);
                     exit(3); 
                 }
+
+                node -> val_type = entry -> type; 
+
                 return LLVMBuildLoad2(builder, val_type_to_llvm_type(entry -> type), 
                         entry -> id_alloca, "loaded_var"); 
             }
@@ -167,6 +227,7 @@ static LLVMValueRef code_gen_id(AST_node* root)
         fprintf(stderr, "Error: %s is not declared\n", node -> id_str);
         exit(3); 
     }
+    node -> val_type = entry -> type; 
     return entry -> id_alloca; 
 }
 
@@ -181,9 +242,9 @@ static void code_gen_if_stmt(AST_node* root)
     //get the function from the builder position 
     LLVMValueRef current_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
 
-    LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(current_function, "then"); 
-    LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(current_function, "else"); 
-    LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(current_function, "merge"); 
+    LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(current_function, "then_block"); 
+    LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(current_function, "else_block"); 
+    LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(current_function, "merge_block"); 
 
     LLVMBuildCondBr(builder, condition, then_block, else_block); 
 
@@ -217,9 +278,19 @@ static void code_gen_stmt(AST_node* root)
         case NODE_ASSIGN: 
             {
                 AST_assign_node* node = (AST_assign_node*)root; 
+
                 LLVMValueRef dest_ref = code_gen_id(node -> dest); 
                 LLVMValueRef val_ref = code_gen_exp(node -> assign_exp); 
-                LLVMBuildStore(builder, val_ref, dest_ref); 
+
+                Value_type dest_type = ast_exp_val_type(node -> dest); 
+                Value_type exp_type = ast_exp_val_type(node -> assign_exp); 
+
+                Value_type assign_type = type_resolve_assign(dest_type, exp_type); 
+
+                LLVMValueRef cexp = cast_if_needed(val_ref, exp_type, assign_type); 
+
+
+                LLVMBuildStore(builder, cexp, dest_ref); 
             }
             break; 
         case NODE_IF: 

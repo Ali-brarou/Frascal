@@ -3,52 +3,15 @@
 
 #include <stdlib.h> 
 #include <string.h> 
-#include <stdbool.h>  
 #include <ctype.h> 
 #include <stdio.h> 
 
+#include "types.h"
 #include "linkedlist.h"
 
 typedef Linkedlist Declarations_llist; 
 typedef Linkedlist Statements_llist; 
 typedef Linkedlist Branches_llist; 
-
-typedef enum Value_type_e {
-    VAL_INT , 
-    VAL_FLOAT, 
-    VAL_BOOL, 
-    
-} Value_type; 
-
-typedef union Value_u {
-    int     ival; 
-    float   fval; 
-    bool    bval;  
-} Value; 
-
-
-typedef enum Op_e {
-    //arithmatique
-    OP_ADD, 
-    OP_SUB, 
-    OP_MUL,
-    OP_DIV, 
-    OP_IDIV, 
-    OP_MOD, 
-    OP_UMIN, 
-    //relational
-    OP_GREATER,  
-    OP_LESS, 
-    OP_GREATER_EQUAL, 
-    OP_LESS_EQUAL, 
-    OP_EQUAL, 
-    OP_NOT_EQUAL, 
-    //booleen
-    OP_OR, 
-    OP_AND, 
-    OP_NOT, 
-
-} Op_type; 
 
 typedef enum Node_type_e {
     NODE_PROGRAM,  
@@ -129,7 +92,7 @@ typedef struct AST_if_node_s {
 
     AST_node* elif_branches; 
     
-    AST_node* else_action; //NULL if else is not used 
+    AST_node* else_action; /*NULL if else is not used*/ 
 
 } AST_if_node; 
 
@@ -154,6 +117,8 @@ typedef struct AST_op_nodes_s {
 
     Op_type op_type; 
 
+    Value_type val_type; /*This will be populated during type resolution*/ 
+
     AST_node* lhs; 
     AST_node* rhs; 
 
@@ -164,7 +129,7 @@ typedef struct AST_const_s {
 
     Value_type val_type; 
 
-    Value value; 
+    Const_value value; 
 
 } AST_const_node; 
 
@@ -172,6 +137,8 @@ typedef struct AST_id_node_s {
     Node_type type;  
 
     char* id_str;  
+
+    Value_type val_type; /*This will be populated during type resolution*/ 
 
 } AST_id_node; 
 
@@ -195,8 +162,9 @@ AST_node *ast_branch_node_create(AST_node* cond, AST_node* action);
 
 
 //expressions
+Value_type ast_exp_val_type(AST_node* exp_node); 
 AST_node *ast_op_node_create(Op_type otype, AST_node* lhs, AST_node* rhs); 
-AST_node *ast_const_node_create(Value_type val_type, Value val);  
+AST_node *ast_const_node_create(Value_type val_type, Const_value val);  
 AST_node *ast_id_node_create(char* id_str); 
 
 void AST_tree_free(void* tree);

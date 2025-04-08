@@ -11,13 +11,17 @@ parser.h: parser.c
 lexer.c: lexer.l 
 	flex -o $@ $^
 
-frascal: main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c
-	$(CC) main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c $(CFLAGS) -o $@
+frascal: main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c
+	$(CC) main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c $(CFLAGS) -o $@
 
 
 .PHONY: memcheck
 memcheck: 
 	valgrind --leak-check=full --show-leak-kinds=all ./frascal test.frp
+
+.PHONY: test 
+test: 
+	./frascal test.frp 
 
 .PHONY: clean
 clean : 

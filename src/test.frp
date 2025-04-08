@@ -1,17 +1,10 @@
 TDO
-    z: booleen
     x: entier
-    y: entier 
-    w: booleen  
+    y: reel 
 debut
-    z := vrai
-    x := 32 
-    y := 32 
-    x := 3 DIV 32
-    si (vrai) alors 
-        x := 3
-    sinon 
-        x := 4
-    finsi
+    x := 32
+    y := 32 + x 
+    x := x DIV 3
+    y := x MOD 3
     y := x
 fin

@@ -1,6 +1,7 @@
 %debug
 %glr-parser /* glr can handle if stmt grammar that LR(1) couldn't handle*/ 
 %{
+#include "types.h"
 #include "ast.h"
 #include <stdlib.h> 
 #include <string.h> 
@@ -20,7 +21,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
     int tok; 
     char* str; //for identifiers 
-    Value val; 
+    Const_value val; 
 }
 
 %token <str> T_IDENTIFIER 

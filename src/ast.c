@@ -63,7 +63,7 @@ AST_node *ast_statements_node_create(AST_node* statement)
     
     node -> stmts_list = LL_create_list(); 
     LL_insert_back(node -> stmts_list, statement); 
-
+    
     return (AST_node*) node; 
 }
 
@@ -129,6 +129,37 @@ AST_node *ast_branch_node_create(AST_node* cond, AST_node* action)
 
 
 
+Value_type ast_exp_val_type(AST_node* exp_node)
+{
+    if (exp_node == NULL)
+        return VAL_ERROR; 
+    switch (exp_node -> type)
+    {
+        case NODE_OP: 
+            {
+                AST_op_node* node = (AST_op_node*) exp_node; 
+                return node -> val_type; 
+            }
+        case NODE_CONST: 
+            {
+                AST_const_node* node = (AST_const_node*) exp_node; 
+                return node -> val_type; 
+            }
+            break; 
+        case NODE_ID: 
+            {
+                AST_id_node* node = (AST_id_node*) exp_node; 
+                return node -> val_type; 
+            }
+            break; 
+        default: 
+            fprintf(stderr,"Error : ast node is not an expression\n"); 
+            exit(3);
+    }
+
+    return VAL_ERROR; 
+}
+
 AST_node *ast_op_node_create(Op_type op_type, AST_node* lhs, AST_node* rhs)
 {
     AST_op_node* node = malloc(sizeof(AST_op_node)); 
@@ -142,7 +173,7 @@ AST_node *ast_op_node_create(Op_type op_type, AST_node* lhs, AST_node* rhs)
     return (AST_node*) node; 
 }
 
-AST_node *ast_const_node_create(Value_type val_type, Value val)
+AST_node *ast_const_node_create(Value_type val_type, Const_value val)
 {
     AST_const_node* node = malloc(sizeof(AST_const_node)); 
 
@@ -420,6 +451,9 @@ void AST_tree_print(AST_node* root_node, int depth)
                         break; 
                     case VAL_BOOL: 
                         printd(depth, "node const with value : %d\n", node -> value.bval); 
+                        break; 
+                    case VAL_ERROR: 
+                        printd(depth, "a bad const node\n"); 
                         break; 
                 }
             } 
