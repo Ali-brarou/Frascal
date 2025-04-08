@@ -6,7 +6,7 @@
 #include <llvm-c/Core.h> //LLVMValueRef
 
 #include "linkedlist.h"
-#include "ast.h"
+#include "types.h"
 
 #define TABLE_SIZE 333
 

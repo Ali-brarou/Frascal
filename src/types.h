@@ -6,7 +6,7 @@
 #include <stdlib.h>  
 
 typedef enum Value_type_e {
-    VAL_ERROR, 
+    VAL_NULL, 
     VAL_INT , 
     VAL_FLOAT, 
     VAL_BOOL, 
@@ -43,6 +43,7 @@ typedef enum Op_e {
 
 } Op_type; 
 
+bool op_rel(Op_type op); //check wether an operation is a relational operation 
 Value_type type_resolve_op(Value_type left, Value_type right, Op_type op); 
 Value_type type_resolve_assign(Value_type dest, Value_type exp); 
 

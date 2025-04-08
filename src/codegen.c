@@ -57,6 +57,8 @@ static LLVMTypeRef val_type_to_llvm_type(Value_type val_type)
 
 static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type)
 {
+    if (value == NULL) 
+        return NULL; 
     if (val_type != dest_type)
     {
         switch (dest_type) 
@@ -120,7 +122,11 @@ static LLVMValueRef code_gen_op(AST_node* root)
 
     //resolve types
     Value_type node_val_type = type_resolve_op(left_node_type, right_node_type, node -> op_type) ; 
-    node -> val_type = node_val_type; 
+
+    if (op_rel(node -> op_type))
+        node -> val_type = VAL_BOOL; 
+    else
+        node -> val_type = node_val_type; 
 
     //cast left and right
     LLVMValueRef cleft = cast_if_needed(left,  left_node_type, node_val_type); 
@@ -154,7 +160,58 @@ static LLVMValueRef code_gen_op(AST_node* root)
         case OP_MOD: 
             return LLVMBuildSRem(builder, cleft, cright, "modtmp"); 
         case OP_UMIN: 
-            return LLVMBuildNeg(builder, cleft, "negtmp"); 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFNeg(builder, cleft, "fnegtmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildNeg(builder, cleft, "negtmp"); 
+            break; 
+
+
+        case OP_GREATER: 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFCmp(builder, LLVMRealOGT, cleft, cright, "fgtcmptmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildICmp(builder, LLVMIntSGT, cleft, cright, "gtcmptmp"); 
+            break; 
+        case OP_LESS: 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFCmp(builder, LLVMRealOLT, cleft, cright, "fltcmptmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildICmp(builder, LLVMIntSLT, cleft, cright, "ltcmptmp"); 
+            break; 
+        case OP_GREATER_EQUAL: 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFCmp(builder, LLVMRealOGE, cleft, cright, "fgecmptmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildICmp(builder, LLVMIntSGE, cleft, cright, "gecmptmp"); 
+            break; 
+        case OP_LESS_EQUAL: 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFCmp(builder, LLVMRealOLE, cleft, cright, "flecmptmp"); 
+            else if (node_val_type == VAL_INT)
+                return LLVMBuildICmp(builder, LLVMIntSLE, cleft, cright, "lecmptmp"); 
+            break; 
+        case OP_EQUAL:  
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFCmp(builder, LLVMRealOEQ, cleft, cright, "feqcmptmp"); 
+            else if (node_val_type == VAL_INT || node_val_type == VAL_BOOL)
+                return LLVMBuildICmp(builder, LLVMIntEQ, cleft, cright, "eqcmptmp"); 
+            break; 
+        case OP_NOT_EQUAL: 
+            if (node_val_type == VAL_FLOAT)
+                return LLVMBuildFCmp(builder, LLVMRealONE, cleft, cright, "fnecmptmp"); 
+            else if (node_val_type == VAL_INT || node_val_type == VAL_BOOL)
+                return LLVMBuildICmp(builder, LLVMIntNE, cleft, cright, "necmptmp"); 
+            break; 
+
+        case OP_AND: 
+                return LLVMBuildAnd(builder, cleft, cright, "andtemp"); 
+        case OP_OR: 
+                return LLVMBuildOr(builder, cleft, cright, "ortemp"); 
+        case OP_NOT: 
+                return LLVMBuildNot(builder, cleft, "nottemp"); 
+                
+
         default: 
             fprintf(stderr, "Error: bad node not an operation for now only integer operations\n"); 
             exit(3); 

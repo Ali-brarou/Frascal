@@ -132,7 +132,7 @@ AST_node *ast_branch_node_create(AST_node* cond, AST_node* action)
 Value_type ast_exp_val_type(AST_node* exp_node)
 {
     if (exp_node == NULL)
-        return VAL_ERROR; 
+        return VAL_NULL; 
     switch (exp_node -> type)
     {
         case NODE_OP: 
@@ -157,7 +157,7 @@ Value_type ast_exp_val_type(AST_node* exp_node)
             exit(3);
     }
 
-    return VAL_ERROR; 
+    return VAL_NULL; 
 }
 
 AST_node *ast_op_node_create(Op_type op_type, AST_node* lhs, AST_node* rhs)
@@ -452,7 +452,7 @@ void AST_tree_print(AST_node* root_node, int depth)
                     case VAL_BOOL: 
                         printd(depth, "node const with value : %d\n", node -> value.bval); 
                         break; 
-                    case VAL_ERROR: 
+                    case VAL_NULL: 
                         printd(depth, "a bad const node\n"); 
                         break; 
                 }
