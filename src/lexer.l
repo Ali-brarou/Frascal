@@ -13,11 +13,12 @@
 #include "parser.h"
 
 #define TOKEN(t)    (yylval.tok = t)
-#define SAVE_STR    yylval.str = strdup(yytext)
+#define SAVE_ID     yylval.str = strdup(yytext)
 #define SAVE_INT    yylval.val.ival = atoi(yytext) 
 #define SAVE_FLOAT  yylval.val.fval = strtof(yytext, NULL) 
 #define SAVE_TRUE   yylval.val.bval = true
 #define SAVE_FALSE  yylval.val.bval = false 
+#define SAVE_CHAR   yylval.val.cval = yytext[1]
 
 %}
 
@@ -31,10 +32,11 @@ ID [a-z][a-z0-9]*
 
 "//".*|"(*"(.|\n)*"*)" ; /* ignore comments */ 
 
-{DIGIT}+             {SAVE_INT; return T_INTEGER;}
-{DIGIT}+"."{DIGIT}*  {SAVE_FLOAT; return T_FLOAT;} 
+{DIGIT}+                    {SAVE_INT; return T_INTEGER;}
+{DIGIT}+"."{DIGIT}*         {SAVE_FLOAT; return T_FLOAT;} 
 "VRAI"                      {SAVE_TRUE; return T_BOOL;}
 "FAUX"                      {SAVE_FALSE; return T_BOOL;}
+'.'                         {SAVE_CHAR; return T_CHAR;}
 
 "+"             {return TOKEN(T_PLUS);}
 "-"             {return TOKEN(T_MINUS);}
@@ -79,8 +81,9 @@ ID [a-z][a-z0-9]*
 "entier"        {return TOKEN(T_TYPEINT);}
 "reel"          {return TOKEN(T_TYPEFLOAT);}
 "booleen"       {return TOKEN(T_TYPEBOOL);}
+"caractere"     {return TOKEN(T_TYPECHAR);}
 
-{ID}+           {SAVE_STR; return T_IDENTIFIER;}
+{ID}+           {SAVE_ID; return T_IDENTIFIER;}
            
           
 .       fprintf(stderr, "\033[31mError : Unrecognized character \"%c\" at ligne %d\n", yytext[0], yylineno); exit(1); 

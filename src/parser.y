@@ -25,8 +25,8 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 }
 
 %token <str> T_IDENTIFIER 
-%token <val> T_INTEGER T_FLOAT T_BOOL
-%token <tok> T_TYPEINT T_TYPEFLOAT T_TYPEBOOL 
+%token <val> T_INTEGER T_FLOAT T_BOOL T_CHAR
+%token <tok> T_TYPEINT T_TYPEFLOAT T_TYPEBOOL T_TYPECHAR
 %token <tok> T_PLUS T_MINUS T_MULT T_DIV T_IDIV T_MOD T_AND T_OR T_NOT
 %token <tok> T_ASSIGN T_EQ T_NEQ T_LT T_GT T_LE T_GE T_COLON T_COMMA T_LPAREN T_RPAREN T_AT
 %token <tok> T_ALGO T_FUNC T_PROC T_BEGIN T_END T_RETURN T_TDO
@@ -72,12 +72,14 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     var_declaration: id_ref T_COLON T_TYPEINT {$$ = ast_decl_node_create(VAL_INT, $1);}
                 | id_ref T_COLON T_TYPEFLOAT {$$ = ast_decl_node_create(VAL_FLOAT, $1);}
                 | id_ref T_COLON T_TYPEBOOL {$$ = ast_decl_node_create(VAL_BOOL, $1);}
+                | id_ref T_COLON T_TYPECHAR {$$ = ast_decl_node_create(VAL_CHAR, $1);}
 
     id_ref: T_IDENTIFIER {$$ = ast_id_node_create($1);}
 
     const_value: T_INTEGER  {$$ = ast_const_node_create(VAL_INT, $1);}
                 | T_FLOAT   {$$ = ast_const_node_create(VAL_FLOAT, $1);}
                 | T_BOOL    {$$ = ast_const_node_create(VAL_BOOL, $1);}
+                | T_CHAR    {$$ = ast_const_node_create(VAL_CHAR, $1);}
 
 
 

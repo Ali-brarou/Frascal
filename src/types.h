@@ -10,13 +10,14 @@ typedef enum Value_type_e {
     VAL_INT , 
     VAL_FLOAT, 
     VAL_BOOL, 
-    
+    VAL_CHAR,     
 } Value_type; 
 
 typedef union Const_value_u {
     int     ival; 
     float   fval; 
     bool    bval;  
+    char    cval; 
 } Const_value; 
 
 

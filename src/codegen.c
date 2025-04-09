@@ -48,6 +48,8 @@ static LLVMTypeRef val_type_to_llvm_type(Value_type val_type)
             return LLVMFloatType(); 
         case VAL_BOOL: 
             return LLVMInt1Type(); 
+        case VAL_CHAR: 
+            return LLVMInt8Type(); 
         default: 
             fprintf(stderr, "Error: unkown type\n"); 
             exit(3); 
@@ -93,6 +95,9 @@ static void populate_sym_table(AST_node* decls)
             case VAL_BOOL:
                 id_alloca = LLVMBuildAlloca(builder, LLVMInt1Type(), id_node -> id_str); 
             break; 
+            case VAL_CHAR: 
+                id_alloca = LLVMBuildAlloca(builder, LLVMInt8Type(), id_node -> id_str); 
+            break; 
             default: 
                 fprintf(stderr, "Error: bad expression node\n"); 
                 exit(3); 
@@ -123,10 +128,7 @@ static LLVMValueRef code_gen_op(AST_node* root)
     //resolve types
     Value_type node_val_type = type_resolve_op(left_node_type, right_node_type, node -> op_type) ; 
 
-    if (op_rel(node -> op_type))
-        node -> val_type = VAL_BOOL; 
-    else
-        node -> val_type = node_val_type; 
+    node -> val_type = op_rel(node -> op_type) ? VAL_BOOL :node_val_type; 
 
     //cast left and right
     LLVMValueRef cleft = cast_if_needed(left,  left_node_type, node_val_type); 
@@ -154,7 +156,7 @@ static LLVMValueRef code_gen_op(AST_node* root)
                 return LLVMBuildMul(builder, cleft, cright, "fmultmp"); 
             break; 
         case OP_DIV: 
-            return LLVMBuildFMul(builder, cleft, cright, "multmp"); 
+            return LLVMBuildFDiv(builder, cleft, cright, "multmp"); 
         case OP_IDIV: 
             return LLVMBuildSDiv(builder, cleft, cright, "idivtmp"); 
         case OP_MOD: 
@@ -176,7 +178,7 @@ static LLVMValueRef code_gen_op(AST_node* root)
         case OP_LESS: 
             if (node_val_type == VAL_FLOAT)
                 return LLVMBuildFCmp(builder, LLVMRealOLT, cleft, cright, "fltcmptmp"); 
-            else if (node_val_type == VAL_INT)
+            else if (node_val_type == VAL_INT || node_val_type == VAL_CHAR)
                 return LLVMBuildICmp(builder, LLVMIntSLT, cleft, cright, "ltcmptmp"); 
             break; 
         case OP_GREATER_EQUAL: 
@@ -194,13 +196,15 @@ static LLVMValueRef code_gen_op(AST_node* root)
         case OP_EQUAL:  
             if (node_val_type == VAL_FLOAT)
                 return LLVMBuildFCmp(builder, LLVMRealOEQ, cleft, cright, "feqcmptmp"); 
-            else if (node_val_type == VAL_INT || node_val_type == VAL_BOOL)
+            else if (node_val_type == VAL_INT || node_val_type == VAL_BOOL 
+                    || node_val_type == VAL_CHAR)
                 return LLVMBuildICmp(builder, LLVMIntEQ, cleft, cright, "eqcmptmp"); 
             break; 
         case OP_NOT_EQUAL: 
             if (node_val_type == VAL_FLOAT)
                 return LLVMBuildFCmp(builder, LLVMRealONE, cleft, cright, "fnecmptmp"); 
-            else if (node_val_type == VAL_INT || node_val_type == VAL_BOOL)
+            else if (node_val_type == VAL_INT || node_val_type == VAL_BOOL 
+                    || node_val_type == VAL_CHAR)
                 return LLVMBuildICmp(builder, LLVMIntNE, cleft, cright, "necmptmp"); 
             break; 
 
@@ -243,6 +247,9 @@ static LLVMValueRef code_gen_exp(AST_node* root)
                     case VAL_BOOL: 
                         const_ret = LLVMConstInt(LLVMInt1Type(), node -> value.bval, false); 
                     break; 
+                    case VAL_CHAR: 
+                        const_ret = LLVMConstInt(LLVMInt8Type(), node -> value.cval, false); 
+                    break; 
                     default: 
                         fprintf(stderr, "bad expression node\n"); 
                         exit(3); 
@@ -277,6 +284,8 @@ static LLVMValueRef code_gen_exp(AST_node* root)
 
 static LLVMValueRef code_gen_id(AST_node* root)
 {
+    if (root == NULL)
+        return NULL; 
     AST_id_node* node = (AST_id_node*)root; 
     St_entry* entry = st_find(sym_tab, node -> id_str); 
     if (entry == NULL)
@@ -293,27 +302,77 @@ static void code_gen_if_stmt(AST_node* root)
     if (root == NULL)
         return;  
     AST_if_node* node = (AST_if_node*) root; 
+    AST_elif_node* elif_node = (AST_elif_node*) node->elif_branches; 
 
-    LLVMValueRef condition = code_gen_exp(node -> cond); 
+    Linkedlist* merge_buffer = LL_create_list(); 
 
     //get the function from the builder position 
     LLVMValueRef current_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
 
+    LLVMBasicBlockRef if_block = LLVMAppendBasicBlock(current_function, "if_block"); 
     LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(current_function, "then_block"); 
-    LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(current_function, "else_block"); 
-    LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(current_function, "merge_block"); 
 
-    LLVMBuildCondBr(builder, condition, then_block, else_block); 
+    LLVMBuildBr(builder, if_block); 
 
     LLVMPositionBuilderAtEnd(builder, then_block); 
     code_gen_stmt(node -> action); 
-    LLVMBuildBr(builder, merge_block); 
+    LL_insert_back(merge_buffer, then_block); 
+    LLVMPositionBuilderAtEnd(builder, if_block); 
+
+    LLVMValueRef prev_cond = code_gen_exp(node -> cond); 
+    if (ast_exp_val_type(node -> cond) != VAL_BOOL)
+    {
+        fprintf(stderr,"Error: the condition for the if statement is not a booleen\n"); 
+        exit(3); 
+    }
+    LLVMBasicBlockRef prev_then_block = then_block; 
+
+    if (elif_node != NULL)
+    {
+        LL_FOR_EACH(elif_node -> branches_list, ll_node)
+        {
+            AST_branch_node* branch_node = (AST_branch_node*)ll_node -> data; 
+            LLVMBasicBlockRef elif_block = 
+                LLVMAppendBasicBlock(current_function, "elif_block"); 
+            LLVMBasicBlockRef then_block = 
+                LLVMAppendBasicBlock(current_function, "then_block"); 
+
+            LLVMBuildCondBr(builder, prev_cond, prev_then_block, elif_block); 
+            LLVMPositionBuilderAtEnd(builder, then_block); 
+            code_gen_stmt(branch_node -> action); 
+            LL_insert_back(merge_buffer, then_block); 
+            LLVMPositionBuilderAtEnd(builder, elif_block); 
+
+            prev_cond = code_gen_exp(branch_node -> cond); 
+            if (ast_exp_val_type(branch_node -> cond) != VAL_BOOL)
+            {
+                fprintf(stderr,"Error: the condition for the if statement is not a booleen\n"); 
+                exit(3); 
+            }
+            prev_then_block = then_block; 
+    }
+
+    }
+
+    LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(current_function, "else_block"); 
+
+    LLVMBuildCondBr(builder, prev_cond, prev_then_block, else_block); 
 
     LLVMPositionBuilderAtEnd(builder, else_block); 
     code_gen_stmt(node -> else_action); 
-    LLVMBuildBr(builder, merge_block); 
+    LL_insert_back(merge_buffer, else_block); 
 
+    //mergin all then blocks
+    LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(current_function, "merge_block"); 
+    LL_FOR_EACH(merge_buffer, ll_node)
+    {
+        //cast it back from void* to basicblockref
+        LLVMBasicBlockRef then_block = ll_node -> data; 
+        LLVMPositionBuilderAtEnd(builder, then_block); 
+        LLVMBuildBr(builder, merge_block); 
+    }
     LLVMPositionBuilderAtEnd(builder, merge_block); 
+    LL_free_list(&merge_buffer, NULL); 
 }
 
 static void code_gen_stmt(AST_node* root)

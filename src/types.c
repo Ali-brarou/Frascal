@@ -22,10 +22,10 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
         case OP_ADD: 
         case OP_SUB: 
         case OP_MUL: 
+            if (left == VAL_CHAR || right == VAL_CHAR)
+                type_error("Error : arithmetique operation on char"); 
             if (left == VAL_BOOL || right == VAL_BOOL)
-            {
                 type_error("Error : arithmetique operation on booleen"); 
-            }
 
             if (left == VAL_FLOAT || right == VAL_FLOAT)
                 return VAL_FLOAT; 
@@ -33,10 +33,10 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
             return VAL_INT; 
 
         case OP_DIV: 
+            if (left == VAL_CHAR || right == VAL_CHAR)
+                type_error("Error : division on char"); 
             if (left == VAL_BOOL || right == VAL_BOOL)
-            {
                 type_error("Error : division on booleen"); 
-            }
             return VAL_FLOAT; 
         
         case OP_MOD: 
@@ -46,6 +46,8 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
             return VAL_INT;  
 
         case OP_UMIN: 
+            if (left == VAL_CHAR)
+                type_error("Error: negation on a char"); 
             if (left == VAL_BOOL) 
                 type_error("Error: negation on a booleen"); 
             return left;  
@@ -55,17 +57,26 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
         case OP_LESS: 
         case OP_GREATER_EQUAL: 
         case OP_LESS_EQUAL: 
+            if (left == VAL_CHAR && right == VAL_CHAR)
+                return VAL_CHAR; 
             if (left == VAL_BOOL || right == VAL_BOOL)
                 type_error("Error : relational operation on booleen"); 
 
-            if (left == VAL_FLOAT || right == VAL_FLOAT)
-                return VAL_FLOAT; 
+            if (left != VAL_INT && left != VAL_FLOAT)
+                type_error("Error : non-compatible relational operations"); 
+            if (right != VAL_INT && right != VAL_FLOAT)
+                type_error("Error : non-compatible relational operations"); 
 
-            return VAL_INT; 
+            if (left == VAL_INT && right == VAL_INT)
+                return VAL_INT; 
+
+            return VAL_FLOAT; 
     
         case OP_EQUAL: 
         case OP_NOT_EQUAL:  
-            if (left == VAL_BOOL || right == VAL_BOOL)
+            if (left == VAL_CHAR && right == VAL_CHAR)
+                return VAL_CHAR; 
+            if (left == VAL_BOOL && right == VAL_BOOL)
                 return VAL_BOOL; 
 
             if (left != VAL_INT && left != VAL_FLOAT)

@@ -1,12 +1,15 @@
 TDO
     x: entier
-    y: booleentier 
+    y: entier 
     w: booleen 
 debut
     x := 3
-    si (x > 4) alors 
-        y := vrai
+    si (x=2) alors 
+        y := 3 
+    sinon si(x = 3) alors 
+        y := 2
     sinon
-        y := faux
+        y := 3
     finsi
+    y := y
 fin

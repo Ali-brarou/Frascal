@@ -452,6 +452,9 @@ void AST_tree_print(AST_node* root_node, int depth)
                     case VAL_BOOL: 
                         printd(depth, "node const with value : %d\n", node -> value.bval); 
                         break; 
+                    case VAL_CHAR:
+                        printd(depth, "node const with value : %c\n", node -> value.cval); 
+                        break; 
                     case VAL_NULL: 
                         printd(depth, "a bad const node\n"); 
                         break; 
