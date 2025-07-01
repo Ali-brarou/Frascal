@@ -9,9 +9,7 @@ void type_error(char* msg)
 
 bool op_rel(Op_type op)
 {
-    return op == OP_GREATER     || op == OP_LESS        ||
-        op == OP_GREATER_EQUAL  || op == OP_LESS_EQUAL  ||
-        op == OP_EQUAL          || op == OP_NOT_EQUAL; 
+    return op >= OP_GREATER && op <= OP_NOT_EQUAL; 
 }
 
 Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
@@ -23,9 +21,9 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
         case OP_SUB: 
         case OP_MUL: 
             if (left == VAL_CHAR || right == VAL_CHAR)
-                type_error("Error : arithmetique operation on char"); 
+                type_error("arithmetique operation on char"); 
             if (left == VAL_BOOL || right == VAL_BOOL)
-                type_error("Error : arithmetique operation on booleen"); 
+                type_error("arithmetique operation on booleen"); 
 
             if (left == VAL_FLOAT || right == VAL_FLOAT)
                 return VAL_FLOAT; 
@@ -34,22 +32,22 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
 
         case OP_DIV: 
             if (left == VAL_CHAR || right == VAL_CHAR)
-                type_error("Error : division on char"); 
+                type_error("division on char"); 
             if (left == VAL_BOOL || right == VAL_BOOL)
-                type_error("Error : division on booleen"); 
+                type_error("division on booleen"); 
             return VAL_FLOAT; 
         
         case OP_MOD: 
         case OP_IDIV: 
             if (left != VAL_INT && right != VAL_INT)
-                type_error("Error : integer operation on non integers"); 
+                type_error("integer operation on non integers"); 
             return VAL_INT;  
 
         case OP_UMIN: 
             if (left == VAL_CHAR)
-                type_error("Error: negation on a char"); 
+                type_error("negation on a char"); 
             if (left == VAL_BOOL) 
-                type_error("Error: negation on a booleen"); 
+                type_error("negation on a booleen"); 
             return left;  
 
         //relational 
@@ -60,12 +58,12 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
             if (left == VAL_CHAR && right == VAL_CHAR)
                 return VAL_CHAR; 
             if (left == VAL_BOOL || right == VAL_BOOL)
-                type_error("Error : relational operation on booleen"); 
+                type_error("relational operation on booleen"); 
 
             if (left != VAL_INT && left != VAL_FLOAT)
-                type_error("Error : non-compatible relational operations"); 
+                type_error("non-compatible relational operations"); 
             if (right != VAL_INT && right != VAL_FLOAT)
-                type_error("Error : non-compatible relational operations"); 
+                type_error("non-compatible relational operations"); 
 
             if (left == VAL_INT && right == VAL_INT)
                 return VAL_INT; 
@@ -80,9 +78,9 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
                 return VAL_BOOL; 
 
             if (left != VAL_INT && left != VAL_FLOAT)
-                type_error("Error : non-compatible equality operations"); 
+                type_error("non-compatible equality operations"); 
             if (right != VAL_INT && right != VAL_FLOAT)
-                type_error("Error : non-compatible equality operations"); 
+                type_error("non-compatible equality operations"); 
 
             if (left == VAL_INT && right == VAL_INT)
                 return VAL_INT; 
@@ -93,12 +91,12 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
         case OP_AND: 
         case OP_OR: 
             if (left != VAL_BOOL && right != VAL_BOOL)
-                type_error("Error: booleen operation on non booleen"); 
+                type_error("booleen operation on non booleen"); 
             return VAL_BOOL; 
 
         case OP_NOT: 
             if (left != VAL_BOOL)
-                type_error("Error: booleen operation on non booleen"); 
+                type_error("booleen operation on non booleen"); 
             return VAL_BOOL; 
 
         default: 
@@ -114,7 +112,7 @@ Value_type type_resolve_assign(Value_type dest, Value_type exp)
         if (dest == VAL_FLOAT && exp == VAL_INT)     
             return VAL_FLOAT; 
         
-        type_error("Error : identifier and expression don't have the same type"); 
+        type_error("identifier and expression don't have the same type"); 
     }
     return dest;  
 }

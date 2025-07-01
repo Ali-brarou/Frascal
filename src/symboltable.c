@@ -6,7 +6,7 @@ static unsigned int st_hash(char* key)
     unsigned long hash = 5381;
     int c;
 
-    while (c = *key++)
+    while ((c = *key++))
         hash = ((hash << 5) + hash) + c; 
 
     return hash % TABLE_SIZE;

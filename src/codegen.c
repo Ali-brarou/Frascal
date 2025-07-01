@@ -78,9 +78,9 @@ static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Valu
 
 static void populate_sym_table(AST_node* decls)
 {
-    LL_FOR_EACH(((AST_declarations_node*)decls) -> decls_list, ll_node)
+    LL_FOR_EACH(((AST_declarations_node*)decls) -> var_decls_list, ll_node)
     {
-        AST_declaration_node* decl_node = (AST_declaration_node*)ll_node -> data; 
+        AST_var_declaration_node* decl_node = (AST_var_declaration_node*)ll_node -> data; 
         AST_id_node* id_node = (AST_id_node*)(decl_node -> id_node); 
 
         LLVMValueRef id_alloca;
@@ -418,7 +418,7 @@ static void code_gen_stmt(AST_node* root)
     }
 }
 
-void gen_ir(AST_node* program_node)
+void code_gen_ir(AST_node* program_node)
 {
     
     //creating a main function without arguments

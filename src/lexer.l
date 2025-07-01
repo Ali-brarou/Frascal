@@ -77,11 +77,13 @@ ID [a-z][a-z0-9]*
 "debut"         {return TOKEN(T_BEGIN);}
 "fin"           {return TOKEN(T_END);}
 "retourner"     {return TOKEN(T_RETURN);}
+"TDNT"          {return TOKEN(T_TDNT);}
 "TDO"           {return TOKEN(T_TDO);}
 "entier"        {return TOKEN(T_TYPEINT);}
 "reel"          {return TOKEN(T_TYPEFLOAT);}
 "booleen"       {return TOKEN(T_TYPEBOOL);}
 "caractere"     {return TOKEN(T_TYPECHAR);}
+"tableau"       {return TOKEN(T_ARRAY);}
 
 {ID}+           {SAVE_ID; return T_IDENTIFIER;}
            

@@ -9,15 +9,21 @@
 #include "types.h"
 #include "linkedlist.h"
 
-typedef Linkedlist Declarations_llist; 
+typedef Linkedlist Var_declarations_llist; 
+typedef Linkedlist Fun_declarations_llist; 
+typedef Linkedlist New_type_decls_llist; 
 typedef Linkedlist Statements_llist; 
 typedef Linkedlist Branches_llist; 
 
 typedef enum Node_type_e {
     NODE_PROGRAM,  
+    //new types 
+    NODE_NEW_TYPE_DECLS,
+    NODE_ARRAY_TYPE_DECL,  
     //declarations
     NODE_DECLARATIONS, 
-    NODE_DECLARATION, 
+    NODE_VAR_DECLARATION, 
+    NODE_FUN_DECLARATION, 
     //statements
     NODE_STATEMENTS, 
     NODE_ASSIGN, 
@@ -36,9 +42,6 @@ typedef enum Node_type_e {
 
 typedef struct AST_node_s { /*basic node*/
     Node_type type;  
-
-    struct AST_node_s *left, *right; 
-     
 } AST_node; 
 
 typedef struct AST_program_node_s { /*main program node*/
@@ -49,23 +52,43 @@ typedef struct AST_program_node_s { /*main program node*/
 
 } AST_program_node; 
 
+typedef struct AST_ntype_decls_node_s {
+    Node_type type; 
+
+    New_type_decls_llist* new_type_decls_list; 
+} AST_ntype_decls_node; 
+
+typedef struct AST_array_type_decl_node_s {
+    Node_type type; 
+
+    Value_type val_type; 
+    size_t size; 
+} AST_array_type_decl_node; 
 
 typedef struct AST_declarations_node_s {
     Node_type type; 
 
-    Declarations_llist* decls_list; 
+    Var_declarations_llist* var_decls_list; 
+    Fun_declarations_llist* fun_decls_list; 
         
 } AST_declarations_node; 
 
-typedef struct AST_declaration_node_s {
+typedef struct AST_var_declaration_node_s {
     Node_type type; 
 
     Value_type id_type; 
 
     AST_node* id_node; 
     
-} AST_declaration_node; 
+} AST_var_declaration_node; 
 
+typedef struct AST_fun_declaration_node_s {
+    Node_type type; 
+
+    AST_node* id_node; 
+    /* TODO fuck */ 
+
+} AST_fun_declaration_node; 
 
 
 typedef struct AST_statements_node_s {
@@ -143,11 +166,16 @@ typedef struct AST_id_node_s {
 } AST_id_node; 
 
 
-AST_node *ast_node_create(Node_type type, AST_node* left, AST_node* right); 
 AST_node *ast_program_create(AST_node* decls, AST_node* stmts); 
 
+//new types 
+AST_node *ast_ntype_decls_node_create(AST_node* ntype_decl_node); 
+void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_decl_node); 
+AST_node *ast_ntype_array_node_create(AST_node* ntype_decl_node); 
+
 //declarations
-AST_node *ast_decl_node_create(Value_type id_type, AST_node* id_node); 
+AST_node *ast_var_decl_node_create(Value_type id_type, AST_node* id_node); 
+AST_node *ast_fun_decl_node_create(AST_node* id_node); 
 AST_node *ast_decls_node_create(AST_node* decl); 
 void ast_decls_node_insert(AST_node* decls, AST_node* decl); 
 

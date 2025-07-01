@@ -1,15 +1,20 @@
+TDNT
+    test = tableau de 10 entier 
 TDO
     x: entier
     y: entier 
     w: booleen 
 debut
+    y := 0
     x := 3
-    si (x=2) alors 
+    x := 5 + 3 - y
+    si x=2 alors 
         y := 3 
-    sinon si(x = 3) alors 
+    sinon si x = 3 alors 
         y := 2
     sinon
         y := 3
     finsi
+
     y := y
 fin

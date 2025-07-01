@@ -26,11 +26,13 @@ int main(int argc, char*argv[])
         }
     }
 
+    /* compiler init */ 
     code_gen_init(); 
 
     yyparse(); 
-    gen_ir(program_node);
-    //AST_tree_print(program_node, 0); 
+    code_gen_ir(program_node);
+    /* debug */ 
+    AST_tree_print(program_node, 0); 
     
     AST_tree_free(program_node); 
     code_gen_cleanup();  

@@ -25,17 +25,17 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 }
 
 %token <str> T_IDENTIFIER 
-%token <val> T_INTEGER T_FLOAT T_BOOL T_CHAR
+%token <val> T_INTEGER T_FLOAT T_BOOL T_CHAR T_ARRAY
 %token <tok> T_TYPEINT T_TYPEFLOAT T_TYPEBOOL T_TYPECHAR
 %token <tok> T_PLUS T_MINUS T_MULT T_DIV T_IDIV T_MOD T_AND T_OR T_NOT
 %token <tok> T_ASSIGN T_EQ T_NEQ T_LT T_GT T_LE T_GE T_COLON T_COMMA T_LPAREN T_RPAREN T_AT
-%token <tok> T_ALGO T_FUNC T_PROC T_BEGIN T_END T_RETURN T_TDO
+%token <tok> T_ALGO T_FUNC T_PROC T_BEGIN T_END T_RETURN T_TDO T_TDNT
 %token <tok> T_IF T_ELSE T_ENDIF T_THEN T_WHILE T_ENDWHILE T_FOR T_FROM T_TO T_DO
 %token <tok> T_ENDFOR T_REPEAT T_UNTILL 
 
 
 // defining non terminals
-%type <node> program optional_statements statements statement assignment expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch var_declaration declarations TDO optional_TDO 
+%type <node> program optional_statements statements statement assignment expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDO optional_TDO TDNT optional_TDNT
 
 
 //precedences 
@@ -59,20 +59,37 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 %define parse.error verbose
 
 %%
-    program : optional_TDO T_BEGIN optional_statements T_END {program_node = ast_program_create($1, $3);}
-    
+    program : optional_TDNT optional_TDO T_BEGIN optional_statements T_END {program_node = ast_program_create($2, $4);}
+
+    optional_TDNT: TDNT {$$ = $1;}
+                | /*empty*/ {$$ = NULL;}
+
+    TDNT: T_TDNT new_type_decls {$$ = $2;}
+        | T_TDNT {$$ = NULL;} /*empty tdnt */ 
+
+    new_type_decls: array_type_decl
+
+    array_type_decl: id_ref T_EQ T_ARRAY T_FROM T_INTEGER T_TYPEINT
+
     optional_TDO: TDO {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
     
     TDO: T_TDO declarations {$$ = $2;}
+        | T_TDO {$$ = NULL;} /*empty tdo */ 
             
-    declarations: declarations var_declaration {ast_decls_node_insert($1, $2);}
-                | var_declaration {$$ = ast_decls_node_create($1);}
+    declarations: declarations declaration {ast_decls_node_insert($1, $2);}
+                | declaration {$$ = ast_decls_node_create($1);} 
 
-    var_declaration: id_ref T_COLON T_TYPEINT {$$ = ast_decl_node_create(VAL_INT, $1);}
-                | id_ref T_COLON T_TYPEFLOAT {$$ = ast_decl_node_create(VAL_FLOAT, $1);}
-                | id_ref T_COLON T_TYPEBOOL {$$ = ast_decl_node_create(VAL_BOOL, $1);}
-                | id_ref T_COLON T_TYPECHAR {$$ = ast_decl_node_create(VAL_CHAR, $1);}
+    declaration: var_declaration {$$ = $1;}
+                | fun_declaration {$$ = $1;}
+
+    fun_declaration: id_ref T_COLON T_PROC {$$ = ast_fun_decl_node_create($1);}
+                | id_ref T_COLON T_FUNC {$$ = ast_fun_decl_node_create($1);}
+
+    var_declaration: id_ref T_COLON T_TYPEINT {$$ = ast_var_decl_node_create(VAL_INT, $1);}
+                | id_ref T_COLON T_TYPEFLOAT {$$ = ast_var_decl_node_create(VAL_FLOAT, $1);}
+                | id_ref T_COLON T_TYPEBOOL {$$ = ast_var_decl_node_create(VAL_BOOL, $1);}
+                | id_ref T_COLON T_TYPECHAR {$$ = ast_var_decl_node_create(VAL_CHAR, $1);}
 
     id_ref: T_IDENTIFIER {$$ = ast_id_node_create($1);}
 

@@ -6,7 +6,7 @@
 #include <stdlib.h>  
 
 typedef enum Value_type_e {
-    VAL_NULL, 
+    VAL_NULL = 0, 
     VAL_INT , 
     VAL_FLOAT, 
     VAL_BOOL, 
@@ -20,6 +20,9 @@ typedef union Const_value_u {
     char    cval; 
 } Const_value; 
 
+typedef enum New_type_e {
+    NTYPE_ARRAY, 
+} New_type; 
 
 typedef enum Op_e {
     //arithmatique
