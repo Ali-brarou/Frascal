@@ -12,6 +12,11 @@
 
 typedef Linkedlist Entries_llist;
 
+typedef enum Entry_kind_e {
+    ENTRY_FUN, 
+    ENTRY_VAR, 
+} Entry_kind; 
+
 typedef struct St_entry_s {
     char* name;   
     Value_type type; 

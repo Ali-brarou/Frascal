@@ -66,9 +66,10 @@ ID [a-z][a-z0-9]*
 "tant que"      {return TOKEN(T_WHILE);}
 "fin tant que"  {return TOKEN(T_ENDWHILE);}
 "pour"          {return TOKEN(T_FOR);}
-"de"            {return TOKEN(T_FROM);}
+"de"            {return TOKEN(T_DE);}
 "a"             {return TOKEN(T_TO);}
 "faire"         {return TOKEN(T_DO);}
+"fin pour"      {return TOKEN(T_ENDFOR);}
 "repeter"       {return TOKEN(T_REPEAT);}
 "jusqu'a"       {return TOKEN(T_UNTILL);}
 "ALGO"          {return TOKEN(T_ALGO);}

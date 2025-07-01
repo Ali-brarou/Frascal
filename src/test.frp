@@ -1,8 +1,8 @@
 TDNT
-    test = tableau de 10 entier 
 TDO
     x: entier
     y: entier 
+    i: entier 
     w: booleen 
 debut
     y := 0
@@ -16,5 +16,12 @@ debut
         y := 3
     finsi
 
-    y := y
+    pour i de -5 a 30 faire 
+    fin pour
+
+    x := 1 
+    repeter 
+        x := 1
+    jusqu'a (faux)
+
 fin

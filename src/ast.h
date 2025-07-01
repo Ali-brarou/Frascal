@@ -30,6 +30,9 @@ typedef enum Node_type_e {
     NODE_IF, 
     NODE_ELIF,
     NODE_BRANCH, 
+    NODE_FOR, 
+    NODE_WHILE, 
+    NODE_DOWHILE, 
     //expressions
     NODE_OP, 
     NODE_CONST,  
@@ -135,6 +138,32 @@ typedef struct AST_branch_node_s {
 
 } AST_branch_node; 
 
+typedef struct AST_for_node_s {
+    Node_type type; 
+    
+    AST_node* iter; 
+    AST_node* from; 
+    AST_node* to; 
+
+    AST_node* statements; 
+} AST_for_node; 
+
+typedef struct AST_while_node_s {
+    Node_type type; 
+
+    AST_node* cond; 
+    AST_node* statements; 
+
+} AST_while_node; 
+
+typedef struct AST_dowhile_node_s {
+    Node_type type; 
+
+    AST_node* cond; 
+    AST_node* statements; 
+
+} AST_dowhile_node; 
+
 typedef struct AST_op_nodes_s {
     Node_type type; 
 
@@ -187,9 +216,14 @@ AST_node *ast_if_node_create(AST_node* cond, AST_node* action, AST_node* elif, A
 AST_node *ast_elif_node_create(AST_node* branch); 
 void ast_elif_node_insert(AST_node* elif_node, AST_node* branch); 
 AST_node *ast_branch_node_create(AST_node* cond, AST_node* action);
+AST_node *ast_for_node_create(AST_node* iter, AST_node* from, AST_node* to, AST_node* stmts); 
+AST_node *ast_while_node_create(AST_node* cond, AST_node* stmts); 
+AST_node *ast_dowhile_node_create(AST_node* cond, AST_node* stmts); 
 
 
 //expressions
+#define AST_IS_INT_TYPE(node) (ast_exp_val_type(node) == VAL_INT)
+#define AST_IS_BOOL_TYPE(node) (ast_exp_val_type(node) == VAL_BOOL)
 Value_type ast_exp_val_type(AST_node* exp_node); 
 AST_node *ast_op_node_create(Op_type otype, AST_node* lhs, AST_node* rhs); 
 AST_node *ast_const_node_create(Value_type val_type, Const_value val);  

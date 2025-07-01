@@ -30,12 +30,12 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 %token <tok> T_PLUS T_MINUS T_MULT T_DIV T_IDIV T_MOD T_AND T_OR T_NOT
 %token <tok> T_ASSIGN T_EQ T_NEQ T_LT T_GT T_LE T_GE T_COLON T_COMMA T_LPAREN T_RPAREN T_AT
 %token <tok> T_ALGO T_FUNC T_PROC T_BEGIN T_END T_RETURN T_TDO T_TDNT
-%token <tok> T_IF T_ELSE T_ENDIF T_THEN T_WHILE T_ENDWHILE T_FOR T_FROM T_TO T_DO
-%token <tok> T_ENDFOR T_REPEAT T_UNTILL 
+%token <tok> T_IF T_ELSE T_ENDIF T_THEN T_WHILE T_ENDWHILE T_FOR T_ENDFOR T_DE T_TO T_DO
+%token <tok> T_REPEAT T_UNTILL 
 
 
 // defining non terminals
-%type <node> program optional_statements statements statement assignment expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDO optional_TDO TDNT optional_TDNT
+%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDO optional_TDO TDNT optional_TDNT
 
 
 //precedences 
@@ -69,7 +69,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
     new_type_decls: array_type_decl
 
-    array_type_decl: id_ref T_EQ T_ARRAY T_FROM T_INTEGER T_TYPEINT
+    array_type_decl: id_ref T_EQ T_ARRAY T_DE T_INTEGER T_TYPEINT
 
     optional_TDO: TDO {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
@@ -108,6 +108,9 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     
     statement: assignment {$$ = $1;}
                 |  if_stmt {$$ = $1;}
+                |  for_loop_stmt {$$ = $1;}
+                |  while_loop_stmt {$$ = $1;}
+                | dowhile_loop_stmt {$$ = $1;}
 
     assignment: id_ref T_ASSIGN expression {$$ = ast_assign_node_create($1, $3);}
 
@@ -126,7 +129,11 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     optional_else_branch: T_ELSE optional_statements {$$ = $2;}
                 | /*empty*/ {$$ = NULL;}
 
+    for_loop_stmt: T_FOR id_ref T_DE expression T_TO expression T_DO optional_statements T_ENDFOR {$$ = ast_for_node_create($2, $4, $6, $8);}
 
+    while_loop_stmt: T_WHILE expression T_DO optional_statements T_ENDWHILE {$$ = ast_while_node_create($2, $4);}
+
+    dowhile_loop_stmt: T_REPEAT optional_statements T_UNTILL expression {$$ = ast_dowhile_node_create($4, $2);}
     
     expression: id_ref {$$ = $1;} 
                 | const_value {$$ = $1;}

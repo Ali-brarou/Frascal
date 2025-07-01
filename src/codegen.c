@@ -13,7 +13,10 @@ static LLVMTypeRef val_type_to_llvm_type(Value_type val_type);
 static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type); 
 static void populate_sym_table(AST_node* decls); 
 static void code_gen_stmt(AST_node* root); 
+static void code_gen_for_stmt(AST_node* root); 
 static void code_gen_if_stmt(AST_node* root); 
+static void code_gen_while_stmt(AST_node* root); 
+static void code_gen_dowhile_stmt(AST_node* root); 
 static LLVMValueRef code_gen_id(AST_node* root); 
 static LLVMValueRef code_gen_op(AST_node* root); 
 static LLVMValueRef code_gen_exp(AST_node* root); 
@@ -286,6 +289,7 @@ static LLVMValueRef code_gen_id(AST_node* root)
 {
     if (root == NULL)
         return NULL; 
+
     AST_id_node* node = (AST_id_node*)root; 
     St_entry* entry = st_find(sym_tab, node -> id_str); 
     if (entry == NULL)
@@ -320,7 +324,7 @@ static void code_gen_if_stmt(AST_node* root)
     LLVMPositionBuilderAtEnd(builder, if_block); 
 
     LLVMValueRef prev_cond = code_gen_exp(node -> cond); 
-    if (ast_exp_val_type(node -> cond) != VAL_BOOL)
+    if (!AST_IS_BOOL_TYPE(node -> cond))
     {
         fprintf(stderr,"Error: the condition for the if statement is not a booleen\n"); 
         exit(3); 
@@ -375,6 +379,121 @@ static void code_gen_if_stmt(AST_node* root)
     LL_free_list(&merge_buffer, NULL); 
 }
 
+static void code_gen_for_stmt(AST_node* root)
+{
+    if (root == NULL)
+        return; 
+
+    AST_for_node* node = (AST_for_node*) root; 
+
+    LLVMValueRef current_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
+
+    LLVMBasicBlockRef for_cond   = LLVMAppendBasicBlock(current_function, "for_cond"); 
+    LLVMBasicBlockRef for_body   = LLVMAppendBasicBlock(current_function, "for_body"); 
+    LLVMBasicBlockRef for_inc    = LLVMAppendBasicBlock(current_function, "for_inc"); 
+    LLVMBasicBlockRef for_end    = LLVMAppendBasicBlock(current_function, "for_end"); 
+
+
+    //check all variables are integers 
+
+    LLVMValueRef iter = code_gen_id(node -> iter); 
+    LLVMValueRef from = code_gen_exp(node -> from); 
+    LLVMValueRef to   = code_gen_exp(node -> to); 
+    if (!AST_IS_INT_TYPE(node -> iter) || !AST_IS_INT_TYPE(node -> from) || !AST_IS_INT_TYPE(node -> to))
+    {
+        fprintf(stderr,"Error: Can't work with non integers in a for loop\n"); 
+        exit(3); 
+    }
+
+    //initilize the iterator
+    LLVMBuildStore(builder, from, iter); 
+
+    LLVMBuildBr(builder, for_cond); 
+    LLVMPositionBuilderAtEnd(builder, for_cond);
+
+    //for loop condition 
+    LLVMPositionBuilderAtEnd(builder, for_cond);
+    LLVMValueRef iter_val = LLVMBuildLoad2(builder, LLVMInt32Type(), iter, "iter_val");
+    LLVMValueRef cond = LLVMBuildICmp(builder, LLVMIntSLE, iter_val, to, "for_cond");
+    LLVMBuildCondBr(builder, cond, for_body, for_end);
+
+    //body of the loop 
+    LLVMPositionBuilderAtEnd(builder, for_body);
+    code_gen_stmt(node->statements); 
+    LLVMBuildBr(builder, for_inc); 
+
+    //increment block
+    LLVMPositionBuilderAtEnd(builder, for_inc);
+    LLVMValueRef next_val = LLVMBuildAdd(builder, iter_val, LLVMConstInt(LLVMInt32Type(), 1, false), "nextval");
+    LLVMBuildStore(builder, next_val, iter);
+    LLVMBuildBr(builder, for_cond); //jump back to the condition
+
+    //finished the loop 
+    LLVMPositionBuilderAtEnd(builder, for_end);
+    
+}
+
+static void code_gen_while_stmt(AST_node* root)
+{
+    if (root == NULL)
+        return; 
+
+    AST_while_node* node = (AST_while_node*) root; 
+
+    LLVMValueRef current_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
+
+    LLVMBasicBlockRef while_cond   = LLVMAppendBasicBlock(current_function, "while_cond"); 
+    LLVMBasicBlockRef while_body   = LLVMAppendBasicBlock(current_function, "while_body"); 
+    LLVMBasicBlockRef while_end    = LLVMAppendBasicBlock(current_function, "while_end"); 
+
+    LLVMBuildBr(builder, while_cond); 
+    LLVMPositionBuilderAtEnd(builder, while_cond);
+
+    LLVMValueRef cond = code_gen_exp(node -> cond); 
+    if (!AST_IS_BOOL_TYPE(node -> cond))
+    {
+        fprintf(stderr,"Error: the condition for the if statement is not a booleen\n"); 
+        exit(3); 
+    }
+    LLVMBuildCondBr(builder, cond, while_body, while_end); 
+
+    LLVMPositionBuilderAtEnd(builder, while_body);
+    code_gen_stmt(node -> statements); 
+    LLVMBuildBr(builder, while_cond); 
+    LLVMPositionBuilderAtEnd(builder, while_end);
+    
+}
+
+static void code_gen_dowhile_stmt(AST_node* root)
+{
+    if (root == NULL)
+        return; 
+
+    AST_dowhile_node* node = (AST_dowhile_node*) root; 
+
+    LLVMValueRef current_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
+
+    LLVMBasicBlockRef dowhile_body   = LLVMAppendBasicBlock(current_function, "dowhile_body"); 
+    LLVMBasicBlockRef dowhile_cond   = LLVMAppendBasicBlock(current_function, "dowhile_cond"); 
+    LLVMBasicBlockRef dowhile_end    = LLVMAppendBasicBlock(current_function, "dowhile_end"); 
+
+    LLVMBuildBr(builder, dowhile_body); 
+    LLVMPositionBuilderAtEnd(builder, dowhile_body);
+    code_gen_stmt(node -> statements); 
+    LLVMBuildBr(builder, dowhile_cond); 
+
+    LLVMPositionBuilderAtEnd(builder, dowhile_cond);
+    LLVMValueRef cond = code_gen_exp(node -> cond); 
+    if (!AST_IS_BOOL_TYPE(node -> cond))
+    {
+        fprintf(stderr,"Error: the condition for the if statement is not a booleen\n"); 
+        exit(3); 
+    }
+    LLVMBuildCondBr(builder, cond, dowhile_end, dowhile_body); 
+
+    LLVMPositionBuilderAtEnd(builder, dowhile_end);
+}
+
 static void code_gen_stmt(AST_node* root)
 {
     if (root == NULL)
@@ -412,7 +531,17 @@ static void code_gen_stmt(AST_node* root)
         case NODE_IF: 
             code_gen_if_stmt(root);
             break; 
+        case NODE_FOR: 
+            code_gen_for_stmt(root);
+            break; 
+        case NODE_WHILE: 
+            code_gen_while_stmt(root);
+            break; 
+        case NODE_DOWHILE: 
+            code_gen_dowhile_stmt(root);
+            break; 
         default: 
+            
         fprintf(stderr, "Error : bad ast node not a statement\n"); 
         exit(3); 
     }

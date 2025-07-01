@@ -130,8 +130,37 @@ AST_node *ast_branch_node_create(AST_node* cond, AST_node* action)
     return (AST_node*) node; 
 }
 
+AST_node *ast_for_node_create(AST_node* iter, AST_node* from, AST_node* to, AST_node* stmts)
+{
+    NODE_CREATE(node, AST_for_node, NODE_FOR); 
 
+    node -> iter = iter;
+    node -> from = from; 
+    node -> to   = to; 
+    node -> statements = stmts; 
 
+    return (AST_node*) node; 
+}
+
+AST_node *ast_while_node_create(AST_node* cond, AST_node* stmts)
+{
+    NODE_CREATE(node, AST_while_node, NODE_WHILE); 
+
+    node -> cond = cond; 
+    node -> statements = stmts; 
+
+    return (AST_node*) node; 
+}
+
+AST_node *ast_dowhile_node_create(AST_node* cond, AST_node* stmts)
+{
+    NODE_CREATE(node, AST_dowhile_node, NODE_DOWHILE); 
+
+    node -> cond = cond; 
+    node -> statements = stmts; 
+
+    return (AST_node*) node; 
+}
 
 Value_type ast_exp_val_type(AST_node* exp_node)
 {
@@ -170,6 +199,7 @@ AST_node *ast_op_node_create(Op_type op_type, AST_node* lhs, AST_node* rhs)
 
     node -> type = NODE_OP; 
 
+    node -> val_type = VAL_NULL; 
     node -> op_type = op_type; 
     node -> lhs = lhs; 
     node -> rhs = rhs; 
@@ -193,8 +223,8 @@ AST_node *ast_id_node_create(char* id_str)
 {
     AST_id_node* node = malloc(sizeof(AST_id_node)); 
 
+    node -> val_type = VAL_NULL; 
     node -> type = NODE_ID; 
-
     node -> id_str = id_str; 
 
     return (AST_node*) node;  
@@ -269,6 +299,29 @@ void AST_tree_free(void* tree)
                 AST_tree_free(node -> action); 
             }
             break;  
+        case NODE_FOR: 
+            {
+                AST_for_node* node = (AST_for_node*)root_node; 
+                AST_tree_free(node -> iter); 
+                AST_tree_free(node -> from); 
+                AST_tree_free(node -> to); 
+                AST_tree_free(node -> statements); 
+            }
+            break; 
+        case NODE_WHILE: 
+            {
+                AST_while_node* node = (AST_while_node*)root_node; 
+                AST_tree_free(node -> cond); 
+                AST_tree_free(node -> statements); 
+            }
+            break; 
+        case NODE_DOWHILE: 
+            {
+                AST_dowhile_node* node = (AST_dowhile_node*)root_node; 
+                AST_tree_free(node -> cond); 
+                AST_tree_free(node -> statements); 
+            }
+            break; 
         case NODE_OP: 
             {
                 AST_op_node* node = (AST_op_node*)root_node; 
@@ -395,6 +448,20 @@ void AST_tree_print(AST_node* root_node, int depth)
                 AST_tree_print(node -> cond, depth + 1); 
                 printd(depth, "this branch action : \n"); 
                 AST_tree_print(node -> action, depth + 1); 
+            }
+            break; 
+        case NODE_FOR: 
+            {
+                AST_for_node* node = (AST_for_node*)root_node; 
+                printd(depth, "for stmt with iter : \n"); 
+                AST_tree_print(node -> iter, depth + 1); 
+                printd(depth, "for from  : \n"); 
+                AST_tree_print(node -> from, depth + 1); 
+                printd(depth, "for to  : \n"); 
+                AST_tree_print(node -> to, depth + 1); 
+                printd(depth, "for stmts: \n"); 
+                AST_tree_print(node -> statements, depth + 1); 
+
             }
             break; 
         case NODE_OP: 
