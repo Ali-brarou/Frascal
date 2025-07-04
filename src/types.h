@@ -20,9 +20,27 @@ typedef union Const_value_u {
     char    cval; 
 } Const_value; 
 
-typedef enum New_type_e {
-    NTYPE_ARRAY, 
-} New_type; 
+typedef enum Type_kind_e {
+    TYPE_PRIMITIVE, 
+    TYPE_ARRAY, 
+} Type_kind; 
+
+typedef struct Type_s {
+    Type_kind kind; 
+} Type; 
+
+typedef struct Array_type_s {
+    Type_kind kind; 
+    
+    size_t length;   
+    Type* element_type; 
+} Array_ntype; 
+
+typedef struct Primitive_type_s {
+    Type_kind kind; 
+    
+    Value_type val_type; 
+} Primitive_type_s;  
 
 typedef enum Op_e {
     //arithmatique

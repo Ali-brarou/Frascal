@@ -64,19 +64,15 @@ static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Valu
 {
     if (value == NULL) 
         return NULL; 
-    if (val_type != dest_type)
-    {
-        switch (dest_type) 
-        {
-            case VAL_FLOAT: 
-                return LLVMBuildSIToFP(builder, value, LLVMFloatType(), "casted_float"); 
-            break; 
-            default: 
-                fprintf(stderr, "cant cast this node\n"); 
-                exit(3); 
-        }
-    }
-    return value; 
+    if (val_type  == dest_type)
+        return value; 
+
+    if (dest_type == VAL_FLOAT)
+        return LLVMBuildSIToFP(builder, value, LLVMFloatType(), "casted_float"); 
+
+    fprintf(stderr, "cant cast this node\n"); 
+    exit(3); 
+    return NULL; 
 }
 
 static void populate_sym_table(AST_node* decls)
@@ -86,26 +82,7 @@ static void populate_sym_table(AST_node* decls)
         AST_var_declaration_node* decl_node = (AST_var_declaration_node*)ll_node -> data; 
         AST_id_node* id_node = (AST_id_node*)(decl_node -> id_node); 
 
-        LLVMValueRef id_alloca;
-        switch (decl_node -> id_type)
-        {
-            case VAL_INT: 
-                id_alloca = LLVMBuildAlloca(builder, LLVMInt32Type(), id_node -> id_str); 
-            break; 
-            case VAL_FLOAT: 
-                id_alloca = LLVMBuildAlloca(builder, LLVMFloatType(), id_node -> id_str); 
-            break; 
-            case VAL_BOOL:
-                id_alloca = LLVMBuildAlloca(builder, LLVMInt1Type(), id_node -> id_str); 
-            break; 
-            case VAL_CHAR: 
-                id_alloca = LLVMBuildAlloca(builder, LLVMInt8Type(), id_node -> id_str); 
-            break; 
-            default: 
-                fprintf(stderr, "Error: bad expression node\n"); 
-                exit(3); 
-            break; 
-        }
+        LLVMValueRef id_alloca = LLVMBuildAlloca(builder, val_type_to_llvm_type(decl_node->id_type), id_node->id_str);
         if (st_insert(sym_tab, id_node -> id_str, decl_node -> id_type, id_alloca))
         {
             fprintf(stderr, "Error : variable %s already declared\n", id_node -> id_str); 

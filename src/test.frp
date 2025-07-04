@@ -1,10 +1,12 @@
 TDNT
 TDO
-    x: entier
+    x: reel
     y: entier 
     i: entier 
     w: booleen 
+    f: caractere
 debut
+    f := 'c'
     y := 0
     x := 3
     x := 5 + 3 - y
@@ -15,6 +17,8 @@ debut
     sinon
         y := 3
     finsi
+    
+    x := 3.2 + 4
 
     pour i de -5 a 30 faire 
     fin pour
