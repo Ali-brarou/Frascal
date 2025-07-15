@@ -1,5 +1,52 @@
 #include "types.h"
 
+Type* TYPE_PRIMITIVES[VAL_TYPE_LAST + 1]; /*exposed one :3*/ 
+static Primitive_type primitive_types[VAL_CHAR + 1]; 
+
+void type_init(void)
+{
+    for (int val_type = 0; val_type <= VAL_TYPE_LAST; val_type++)
+    {
+        primitive_types[val_type].kind = TYPE_PRIMITIVE; 
+        primitive_types[val_type].val_type = (Value_type)val_type; 
+        TYPE_PRIMITIVES[val_type] = (Type*)&primitive_types[val_type]; 
+    }
+}
+
+bool type_is_singelton(Type* type)
+{
+    for (int val_type = 0; val_type <= VAL_TYPE_LAST; val_type++)
+    {
+        if (type == TYPE_PRIMITIVES[val_type])
+            return true; 
+    }
+    return false; 
+}
+
+Type* type_primitive_create(Value_type vtype)
+{
+    if (vtype >= VAL_ERR && vtype <= VAL_CHAR)
+        return TYPE_PRIMITIVES[vtype];
+    return TYPE_ERR;
+}
+
+void type_free(Type* type)
+{
+    if (!type || type_is_singelton(type))
+        return; 
+
+    switch (type->kind)
+    {
+        case TYPE_PRIMITIVE: 
+            //do nothing 
+            break; 
+        default: 
+            fprintf(stderr, "not implemented yet\n"); 
+            exit(1); 
+    }
+
+    free(type); 
+}
 
 void type_error(char* msg)
 {
@@ -102,7 +149,7 @@ Value_type type_resolve_op(Value_type left, Value_type right, Op_type op)
         default: 
             type_error("Unkown operation"); 
     }
-    return VAL_NULL; 
+    return VAL_ERR; 
 }
 
 Value_type type_resolve_assign(Value_type dest, Value_type exp)

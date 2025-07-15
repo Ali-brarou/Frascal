@@ -19,7 +19,7 @@ typedef enum Entry_kind_e {
 
 typedef struct St_entry_s {
     char* name;   
-    Value_type type; 
+    Type* type; 
     // llvm : 
     LLVMValueRef id_alloca; 
 
@@ -33,11 +33,9 @@ typedef struct Symbol_table_s {
 Symbol_table* st_create(); 
 void st_free(Symbol_table* table); 
 
-St_entry* st_create_entry(char* name, Value_type type, LLVMValueRef id_alloca); 
-void st_free_entry(void* entry); 
 
 /*return 0 if insertion was successful or 1 if its already inserted*/
-int st_insert(Symbol_table* table, char* name, Value_type type, LLVMValueRef id_alloca); 
+int st_insert(Symbol_table* table, char* name, Type* type, LLVMValueRef id_alloca); 
 St_entry* st_find(Symbol_table* table, char* name); 
 
 #endif

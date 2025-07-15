@@ -9,7 +9,7 @@ static Symbol_table* sym_tab;
 // note: both code_gen_id and code_gen_exp can take id_node as input 
 //      first one returns a pointer for assignment 
 //      and the other retunrs a value for expressions
-static LLVMTypeRef val_type_to_llvm_type(Value_type val_type); 
+static LLVMTypeRef type_to_llvm_type(Type* type); 
 static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type); 
 static void populate_sym_table(AST_node* decls); 
 static void code_gen_stmt(AST_node* root); 
@@ -41,9 +41,14 @@ void code_gen_cleanup()
     st_free(sym_tab); 
 }
 
-static LLVMTypeRef val_type_to_llvm_type(Value_type val_type)
+static LLVMTypeRef type_to_llvm_type(Type* type)
 {
-    switch (val_type)
+    if (type->kind != TYPE_PRIMITIVE)
+    {
+        fprintf(stderr, "not implemented yet\n"); 
+        exit(3); 
+    }
+    switch (((Primitive_type*)type) -> val_type)
     {
         case VAL_INT:
             return LLVMInt32Type(); 
@@ -82,7 +87,7 @@ static void populate_sym_table(AST_node* decls)
         AST_var_declaration_node* decl_node = (AST_var_declaration_node*)ll_node -> data; 
         AST_id_node* id_node = (AST_id_node*)(decl_node -> id_node); 
 
-        LLVMValueRef id_alloca = LLVMBuildAlloca(builder, val_type_to_llvm_type(decl_node->id_type), id_node->id_str);
+        LLVMValueRef id_alloca = LLVMBuildAlloca(builder, type_to_llvm_type(decl_node->id_type), id_node->id_str);
         if (st_insert(sym_tab, id_node -> id_str, decl_node -> id_type, id_alloca))
         {
             fprintf(stderr, "Error : variable %s already declared\n", id_node -> id_str); 
@@ -108,7 +113,7 @@ static LLVMValueRef code_gen_op(AST_node* root)
     //resolve types
     Value_type node_val_type = type_resolve_op(left_node_type, right_node_type, node -> op_type) ; 
 
-    node -> val_type = op_rel(node -> op_type) ? VAL_BOOL :node_val_type; 
+    node->res_type = type_primitive_create(op_rel(node -> op_type) ? VAL_BOOL :node_val_type); 
 
     //cast left and right
     LLVMValueRef cleft = cast_if_needed(left,  left_node_type, node_val_type); 
@@ -247,9 +252,9 @@ static LLVMValueRef code_gen_exp(AST_node* root)
                     exit(3); 
                 }
 
-                node -> val_type = entry -> type; 
+                node -> id_type = entry -> type; 
 
-                return LLVMBuildLoad2(builder, val_type_to_llvm_type(entry -> type), 
+                return LLVMBuildLoad2(builder, type_to_llvm_type(entry -> type), 
                         entry -> id_alloca, "loaded_var"); 
             }
         case NODE_OP: 
@@ -274,7 +279,7 @@ static LLVMValueRef code_gen_id(AST_node* root)
         fprintf(stderr, "Error: %s is not declared\n", node -> id_str);
         exit(3); 
     }
-    node -> val_type = entry -> type; 
+    node -> id_type = entry -> type; 
     return entry -> id_alloca; 
 }
 

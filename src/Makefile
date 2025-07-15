@@ -25,4 +25,4 @@ test:
 
 .PHONY: clean
 clean : 
-	rm -rf lexer.c parser.c parser.h frascal parser.gv parser.png
+	rm -rf lexer.c parser.c parser.h frascal parser.gv parser.png out.ll

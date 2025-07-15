@@ -50,11 +50,11 @@ void ast_decls_node_insert(AST_node* decls, AST_node* decl)
         LL_insert_back(((AST_declarations_node*) decls) -> fun_decls_list, decl); 
 }
 
-AST_node *ast_var_decl_node_create(Value_type id_type, AST_node* id_node)
+AST_node *ast_var_decl_node_create(Value_type id_val_type, AST_node* id_node)
 {
     NODE_CREATE(node, AST_var_declaration_node, NODE_VAR_DECLARATION); 
 
-    node -> id_type = id_type;  
+    node -> id_type = type_primitive_create(id_val_type); 
     node -> id_node = id_node; 
 
     return (AST_node*) node; 
@@ -165,13 +165,14 @@ AST_node *ast_dowhile_node_create(AST_node* cond, AST_node* stmts)
 Value_type ast_exp_val_type(AST_node* exp_node)
 {
     if (exp_node == NULL)
-        return VAL_NULL; 
+        return VAL_ERR; 
+    
     switch (exp_node -> type)
     {
         case NODE_OP: 
             {
                 AST_op_node* node = (AST_op_node*) exp_node; 
-                return node -> val_type; 
+                return ((Primitive_type*)(node-> res_type))->val_type; 
             }
         case NODE_CONST: 
             {
@@ -182,7 +183,7 @@ Value_type ast_exp_val_type(AST_node* exp_node)
         case NODE_ID: 
             {
                 AST_id_node* node = (AST_id_node*) exp_node; 
-                return node -> val_type; 
+                return ((Primitive_type*)(node-> id_type))->val_type; 
             }
             break; 
         default: 
@@ -190,7 +191,7 @@ Value_type ast_exp_val_type(AST_node* exp_node)
             exit(3);
     }
 
-    return VAL_NULL; 
+    return VAL_ERR;  
 }
 
 AST_node *ast_op_node_create(Op_type op_type, AST_node* lhs, AST_node* rhs)
@@ -199,7 +200,7 @@ AST_node *ast_op_node_create(Op_type op_type, AST_node* lhs, AST_node* rhs)
 
     node -> type = NODE_OP; 
 
-    node -> val_type = VAL_NULL; 
+    node -> res_type = NULL;  
     node -> op_type = op_type; 
     node -> lhs = lhs; 
     node -> rhs = rhs; 
@@ -223,7 +224,7 @@ AST_node *ast_id_node_create(char* id_str)
 {
     AST_id_node* node = malloc(sizeof(AST_id_node)); 
 
-    node -> val_type = VAL_NULL; 
+    node -> id_type = NULL; 
     node -> type = NODE_ID; 
     node -> id_str = id_str; 
 
@@ -256,6 +257,7 @@ void AST_tree_free(void* tree)
             {
                 AST_var_declaration_node* node = (AST_var_declaration_node*)root_node; 
                 AST_tree_free(node -> id_node);
+                type_free(node -> id_type); 
             }
             break; 
         case NODE_FUN_DECLARATION: 
@@ -533,7 +535,7 @@ void AST_tree_print(AST_node* root_node, int depth)
                     case VAL_CHAR:
                         printd(depth, "node const with value : %c\n", node -> value.cval); 
                         break; 
-                    case VAL_NULL: 
+                    case VAL_ERR: 
                         printd(depth, "a bad const node\n"); 
                         break; 
                 }

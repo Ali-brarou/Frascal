@@ -1,5 +1,8 @@
 #include "symboltable.h"
 
+static St_entry* st_create_entry(char* name, Type* type, LLVMValueRef id_alloca); 
+static void st_free_entry(void* entry); 
+
 static unsigned int st_hash(char* key)
 {
     //djb2 hash
@@ -35,7 +38,7 @@ void st_free(Symbol_table* table)
     free(table); 
 }
 
-St_entry* st_create_entry(char* name, Value_type type, LLVMValueRef id_alloca)
+static St_entry* st_create_entry(char* name, Type* type, LLVMValueRef id_alloca)
 {
     St_entry* entry = malloc(sizeof(St_entry));
     
@@ -46,7 +49,7 @@ St_entry* st_create_entry(char* name, Value_type type, LLVMValueRef id_alloca)
     return entry; 
 }
 
-void st_free_entry(void* entry)
+static void st_free_entry(void* entry)
 {
     if (((St_entry*)entry) -> name != NULL)
         free(((St_entry*)entry) -> name); 
@@ -54,7 +57,7 @@ void st_free_entry(void* entry)
         free(entry); 
 }
 
-int st_insert(Symbol_table* table, char* name, Value_type type, LLVMValueRef id_alloca)
+int st_insert(Symbol_table* table, char* name, Type* type, LLVMValueRef id_alloca)
 {
     if (st_find(table, name) != NULL)
         return 1; 

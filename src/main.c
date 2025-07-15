@@ -26,8 +26,10 @@ int main(int argc, char*argv[])
         }
     }
 
+
     /* compiler init */ 
-    code_gen_init(); 
+    parser_init(); /* parser */  
+    code_gen_init(); /* codegen */  
 
     yyparse(); 
     code_gen_ir(program_node);

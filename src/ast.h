@@ -64,7 +64,7 @@ typedef struct AST_ntype_decls_node_s {
 typedef struct AST_array_type_decl_node_s {
     Node_type type; 
 
-    Value_type val_type; 
+    Type* element_type; 
     size_t size; 
 } AST_array_type_decl_node; 
 
@@ -76,10 +76,11 @@ typedef struct AST_declarations_node_s {
         
 } AST_declarations_node; 
 
+/* the declaration node is the owner of the Type */  
 typedef struct AST_var_declaration_node_s {
     Node_type type; 
 
-    Value_type id_type; 
+    Type* id_type;  
 
     AST_node* id_node; 
     
@@ -169,7 +170,7 @@ typedef struct AST_op_nodes_s {
 
     Op_type op_type; 
 
-    Value_type val_type; /*This will be populated during type resolution*/ 
+    Type* res_type; /*This will be populated during type resolution*/ 
 
     AST_node* lhs; 
     AST_node* rhs; 
@@ -190,7 +191,7 @@ typedef struct AST_id_node_s {
 
     char* id_str;  
 
-    Value_type val_type; /*This will be populated during type resolution*/ 
+    Type* id_type; /*This will be populated during type resolution*/ 
 
 } AST_id_node; 
 
@@ -203,7 +204,7 @@ void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_dec
 AST_node *ast_ntype_array_node_create(AST_node* ntype_decl_node); 
 
 //declarations
-AST_node *ast_var_decl_node_create(Value_type id_type, AST_node* id_node); 
+AST_node *ast_var_decl_node_create(Value_type id_var_type, AST_node* id_node); 
 AST_node *ast_fun_decl_node_create(AST_node* id_node); 
 AST_node *ast_decls_node_create(AST_node* decl); 
 void ast_decls_node_insert(AST_node* decls, AST_node* decl); 

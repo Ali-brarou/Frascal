@@ -5,8 +5,9 @@
 #include <stdio.h> 
 #include <stdlib.h>  
 
+#define VAL_TYPE_LAST VAL_CHAR
 typedef enum Value_type_e {
-    VAL_NULL = 0, 
+    VAL_ERR = 0, 
     VAL_INT , 
     VAL_FLOAT, 
     VAL_BOOL, 
@@ -40,7 +41,7 @@ typedef struct Primitive_type_s {
     Type_kind kind; 
     
     Value_type val_type; 
-} Primitive_type_s;  
+} Primitive_type;  
 
 typedef enum Op_e {
     //arithmatique
@@ -64,6 +65,20 @@ typedef enum Op_e {
     OP_NOT, 
 
 } Op_type; 
+
+/* an ugly solution for ownership of the primitive types */ 
+extern Type* TYPE_PRIMITIVES[VAL_TYPE_LAST + 1]; 
+#define TYPE_INT   TYPE_PRIMITIVES[VAL_INT]
+#define TYPE_FLOAT TYPE_PRIMITIVES[VAL_FLOAT]
+#define TYPE_BOOL  TYPE_PRIMITIVES[VAL_BOOL]
+#define TYPE_CHAR  TYPE_PRIMITIVES[VAL_CHAR]
+#define TYPE_ERR   TYPE_PRIMITIVES[VAL_ERR]
+
+void type_init(void);
+bool type_is_singelton(Type* type); 
+
+Type* type_primitive_create(Value_type val_type); 
+void type_free(Type* type);  
 
 bool op_rel(Op_type op); //check wether an operation is a relational operation 
 Value_type type_resolve_op(Value_type left, Value_type right, Op_type op); 

@@ -7,6 +7,10 @@
 #include <string.h> 
 #include <stdio.h> 
 AST_node* program_node = NULL; //main program node
+void parser_init(void)
+{
+    type_init(); 
+}
 
 extern int yylex(); 
 void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);} 
@@ -14,6 +18,10 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 #define YYMAXDEPTH 10000 /*bigger stack size*/ 
 //int yydebug = 1; /*enable debugging*/ 
 %}
+
+%code requires { /* add functions declarations in parser.h */  
+    void parser_init(void);
+}
 
 %union {
 
