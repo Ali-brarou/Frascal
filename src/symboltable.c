@@ -1,6 +1,6 @@
 #include "symboltable.h"
 
-static St_entry* st_create_entry(char* name, Type* type, LLVMValueRef id_alloca); 
+static St_entry* st_create_var_entry(char* name, Type* type, LLVMValueRef value_ref); 
 static void st_free_entry(void* entry); 
 
 static unsigned int st_hash(char* key)
@@ -38,48 +38,109 @@ void st_free(Symbol_table* table)
     free(table); 
 }
 
-static St_entry* st_create_entry(char* name, Type* type, LLVMValueRef id_alloca)
+static St_entry* st_create_var_entry(char* name, Type* type, LLVMValueRef id_alloca)
 {
     St_entry* entry = malloc(sizeof(St_entry));
     
+    entry -> kind = ENTRY_VAR; 
     entry -> name = strdup(name); 
     entry -> type = type; 
-    entry -> id_alloca = id_alloca; 
+    entry -> value_ref = id_alloca; 
 
-    return entry; 
+    return (St_entry*)entry; 
+}
+
+static St_entry* st_create_fun_entry(char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
+{
+    St_entry* entry = malloc(sizeof(St_entry));
+    
+    entry -> kind = ENTRY_FUN; 
+    entry -> name = strdup(name); 
+    entry -> type = fun_type; 
+    entry -> value_ref = fun_ref; 
+    entry -> type_ref = llvm_fun_type; 
+
+    return (St_entry*)entry; 
 }
 
 static void st_free_entry(void* entry)
 {
+    if (!entry)
+        return; 
+
     if (((St_entry*)entry) -> name != NULL)
         free(((St_entry*)entry) -> name); 
-    if (entry != NULL)
-        free(entry); 
+    type_free(((St_entry*)entry)->type); 
+    
+    free(entry); 
 }
 
-int st_insert(Symbol_table* table, char* name, Type* type, LLVMValueRef id_alloca)
+int st_insert_var(Symbol_table* table, char* name, Type* type, LLVMValueRef id_alloca)
 {
-    if (st_find(table, name) != NULL)
-        return 1; 
+    if (st_find_var(table, name) != NULL)
+        return ST_ALREADY_DECLARED; 
     
-    St_entry* entry = st_create_entry(name, type, id_alloca); 
+    St_entry* entry = st_create_var_entry(name, type, id_alloca); 
     unsigned index = st_hash(name); 
     LL_insert_back(table->buckets[index], entry); 
     
-    return 0; 
+    return ST_INSERT_SUCCESS; 
 }
 
-St_entry* st_find(Symbol_table* table, char* name)
+int st_insert_fun(Symbol_table* table, char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
+{
+    St_entry* entry = st_create_fun_entry(name, fun_type, fun_ref, llvm_fun_type); 
+    unsigned index = st_hash(name); 
+    LL_insert_back(table->buckets[index], entry); 
+    
+    return ST_INSERT_SUCCESS; 
+}
+
+St_entry* st_find_var(Symbol_table* table, char* name)
 {
     unsigned index = st_hash(name); 
 
     LL_FOR_EACH(table->buckets[index], node)
     {
-        if (!strcmp(((St_entry*)node -> data) -> name, name))
+        if (!strcmp(((St_entry*)node -> data) -> name, name) 
+                && ((St_entry*)node->data)->kind==ENTRY_VAR)
         {
             return (St_entry*) node -> data; 
         }
     }
 
     return NULL; 
+}
+
+static bool is_entry_fn_equal(St_entry* entry, char* name, Type** args, size_t args_count)
+{
+    if (!strcmp(name, entry->name))
+        return false; 
+    if (entry->type->kind != TYPE_FUNCTION)
+        return false; 
+    Function_type* fn_type = (Function_type*)entry->type; 
+    if (fn_type->param_count != args_count)
+        return false; 
+    for (size_t i = 0; i < args_count; i++)
+    {
+        if (!type_equal(fn_type->param_types[i], args[i]))
+            return false; 
+    }
+    return true; 
+}
+
+St_entry* st_find_fun(Symbol_table* table, char* name, Type** args, size_t args_count)
+{
+    unsigned index = st_hash(name); 
+
+    LL_FOR_EACH(table->buckets[index], node)
+    {
+        if (is_entry_fn_equal((St_entry*)node->data, name, args, args_count))
+        {
+            return (St_entry*) node -> data; 
+        }
+    }
+
+    return NULL; 
+    
 }

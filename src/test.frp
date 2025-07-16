@@ -1,4 +1,10 @@
 TDNT
+fonction test(x: entier): entier
+TDO   
+    y: entier
+debut 
+    retourner x
+fin 
 TDO
     x: reel
     y: entier 

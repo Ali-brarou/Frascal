@@ -24,6 +24,7 @@ typedef union Const_value_u {
 typedef enum Type_kind_e {
     TYPE_PRIMITIVE, 
     TYPE_ARRAY, 
+    TYPE_FUNCTION, 
 } Type_kind; 
 
 typedef struct Type_s {
@@ -35,7 +36,16 @@ typedef struct Array_type_s {
     
     size_t length;   
     Type* element_type; 
-} Array_ntype; 
+} Array_type; 
+
+/* should be responsible for freeing the array of params types */ 
+typedef struct Function_type_s {
+    Type_kind kind; 
+
+    Type* return_type;
+    Type** param_types;
+    size_t param_count;
+} Function_type;
 
 typedef struct Primitive_type_s {
     Type_kind kind; 
@@ -76,12 +86,16 @@ extern Type* TYPE_PRIMITIVES[VAL_TYPE_LAST + 1];
 
 void type_init(void);
 bool type_is_singelton(Type* type); 
+bool type_equal(Type* type_a, Type* type_b); 
 
 Type* type_primitive_create(Value_type val_type); 
+Type* type_function_create(Type* return_type, Type** param_types, size_t param_count);
 void type_free(Type* type);  
 
-bool op_rel(Op_type op); //check wether an operation is a relational operation 
-Value_type type_resolve_op(Value_type left, Value_type right, Op_type op); 
-Value_type type_resolve_assign(Value_type dest, Value_type exp); 
+bool op_rel(Op_type op); /* check whether an operation is a relational operation */
+bool op_unary(Op_type op); /* check whether an operation is a unary operation */ 
+#define op_binary(op) (!op_unary(op)) 
+Type* type_resolve_op(Type* left, Type* right, Op_type op); 
+Type* type_resolve_assign(Type* dest, Type* exp); 
 
 #endif

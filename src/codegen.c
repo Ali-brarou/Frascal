@@ -4,13 +4,18 @@
 static LLVMModuleRef module; 
 static LLVMBuilderRef builder; 
 
-static Symbol_table* sym_tab; 
+/* I am not a fan of global variables I think I will use a context instead */ 
+static Symbol_table* global_sym_tab  = NULL; 
+static Symbol_table* current_sym_tab = NULL; /* represent local symbol table */ 
+static Type* current_fn_ret_type    = NULL; 
 
 // note: both code_gen_id and code_gen_exp can take id_node as input 
 //      first one returns a pointer for assignment 
 //      and the other retunrs a value for expressions
 static LLVMTypeRef type_to_llvm_type(Type* type); 
-static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type); 
+static LLVMValueRef cast_if_needed(LLVMValueRef value, Type* val_type, Type* dest_type); 
+static void code_gen_subprograms(AST_node* subprograms); 
+static void code_gen_function(AST_node* function); 
 static void populate_sym_table(AST_node* decls); 
 static void code_gen_stmt(AST_node* root); 
 static void code_gen_for_stmt(AST_node* root); 
@@ -19,7 +24,10 @@ static void code_gen_while_stmt(AST_node* root);
 static void code_gen_dowhile_stmt(AST_node* root); 
 static LLVMValueRef code_gen_id(AST_node* root); 
 static LLVMValueRef code_gen_op(AST_node* root); 
+static LLVMValueRef code_gen_call(AST_node* root); 
 static LLVMValueRef code_gen_exp(AST_node* root); 
+static St_entry* find_var(char * name); 
+static St_entry* find_fun(char * name, Type** args, size_t args_count); 
 
 void code_gen_init()
 {
@@ -28,7 +36,7 @@ void code_gen_init()
     builder = LLVMCreateBuilder(); 
 
     //set up the symbol table 
-    sym_tab = st_create(); 
+    global_sym_tab = st_create(); 
 }
 
 void code_gen_cleanup()
@@ -38,8 +46,28 @@ void code_gen_cleanup()
     LLVMDisposeModule(module); 
 
     //free the symbol table
-    st_free(sym_tab); 
+    st_free(global_sym_tab); 
 }
+
+static St_entry* find_var(char* name)
+{
+    St_entry* var = st_find_var(current_sym_tab, name); 
+    if (var)
+        return var; 
+
+    /* if it's the main function dont research in the global sym tab */ 
+    if (current_sym_tab == global_sym_tab)
+        return NULL; 
+
+    return st_find_var(global_sym_tab, name); 
+}
+
+/* for now search only the global table */ 
+static St_entry* find_fun(char* name, Type** args, size_t args_count)
+{
+    return st_find_fun(global_sym_tab, name, args, args_count); 
+}
+
 
 static LLVMTypeRef type_to_llvm_type(Type* type)
 {
@@ -65,32 +93,47 @@ static LLVMTypeRef type_to_llvm_type(Type* type)
     return NULL; 
 }
 
-static LLVMValueRef cast_if_needed(LLVMValueRef value, Value_type val_type, Value_type dest_type)
+static LLVMValueRef cast_if_needed(LLVMValueRef value, Type* val_type, Type* dest_type)
 {
-    if (value == NULL) 
-        return NULL; 
-    if (val_type  == dest_type)
-        return value; 
+    if (value == NULL || val_type == NULL || dest_type == NULL)
+        return NULL;
 
-    if (dest_type == VAL_FLOAT)
-        return LLVMBuildSIToFP(builder, value, LLVMFloatType(), "casted_float"); 
+    if (type_equal(val_type, dest_type))
+        return value;
 
-    fprintf(stderr, "cant cast this node\n"); 
-    exit(3); 
-    return NULL; 
+    if (val_type->kind != TYPE_PRIMITIVE || dest_type->kind != TYPE_PRIMITIVE)
+    {
+        fprintf(stderr, "Cannot cast non-primitive types\n");
+        exit(3);
+    }
+
+    Primitive_type* from = (Primitive_type*)val_type;
+    Primitive_type* to = (Primitive_type*)dest_type;
+
+    if (from->val_type == VAL_INT && to->val_type == VAL_FLOAT)
+    {
+        return LLVMBuildSIToFP(builder, value, LLVMFloatType(), "casted_float");
+    }
+
+    fprintf(stderr, "Unsupported cast from type %d to type %d\n", from->val_type, to->val_type);
+    exit(3);
+    return NULL;
 }
 
 static void populate_sym_table(AST_node* decls)
 {
+    if (!decls)
+        return; 
     LL_FOR_EACH(((AST_declarations_node*)decls) -> var_decls_list, ll_node)
     {
         AST_var_declaration_node* decl_node = (AST_var_declaration_node*)ll_node -> data; 
         AST_id_node* id_node = (AST_id_node*)(decl_node -> id_node); 
 
         LLVMValueRef id_alloca = LLVMBuildAlloca(builder, type_to_llvm_type(decl_node->id_type), id_node->id_str);
-        if (st_insert(sym_tab, id_node -> id_str, decl_node -> id_type, id_alloca))
+        if (st_insert_var(current_sym_tab, id_node->id_str, decl_node->id_type, id_alloca)
+                                                == ST_ALREADY_DECLARED)
         {
-            fprintf(stderr, "Error : variable %s already declared\n", id_node -> id_str); 
+            fprintf(stderr, "Error : variable %s declared twice\n", id_node -> id_str); 
             exit(3); 
         }
     }
@@ -107,19 +150,20 @@ static LLVMValueRef code_gen_op(AST_node* root)
     LLVMValueRef left = code_gen_exp(node -> lhs); 
     LLVMValueRef right = code_gen_exp(node -> rhs); 
      
-    Value_type left_node_type =  ast_exp_val_type(node -> lhs); 
-    Value_type right_node_type =  ast_exp_val_type(node -> rhs); 
+    Type* left_node_type =  ast_exp_type(node -> lhs); 
+    Type* right_node_type =  ast_exp_type(node -> rhs); 
 
     //resolve types
-    Value_type node_val_type = type_resolve_op(left_node_type, right_node_type, node -> op_type) ; 
+    Type* node_type = type_resolve_op(left_node_type, right_node_type, node -> op_type) ; 
 
-    node->res_type = type_primitive_create(op_rel(node -> op_type) ? VAL_BOOL :node_val_type); 
+    node->res_type = op_rel(node -> op_type) ? TYPE_BOOL :node_type; 
 
     //cast left and right
-    LLVMValueRef cleft = cast_if_needed(left,  left_node_type, node_val_type); 
-    LLVMValueRef cright = cast_if_needed(right,  right_node_type, node_val_type); 
+    LLVMValueRef cleft = cast_if_needed(left,  left_node_type, node_type); 
+    LLVMValueRef cright = cast_if_needed(right,  right_node_type, node_type); 
     
     //do the operation 
+    Value_type node_val_type = ((Primitive_type*)node_type)->val_type; 
     switch (node -> op_type)
     {
         case OP_ADD: 
@@ -209,6 +253,48 @@ static LLVMValueRef code_gen_op(AST_node* root)
     return NULL; 
 }
 
+static LLVMValueRef code_gen_call(AST_node* root)
+{
+    size_t args_count = 0; 
+    Type** args_type = NULL; 
+    LLVMValueRef* args_val = NULL; 
+    AST_call_node* call = (AST_call_node*)root; 
+    AST_args_node* args = (AST_args_node*)call->args; 
+
+    if (args != NULL)
+    {
+        args_count = LL_size(args->args_list); 
+        args_type = malloc(args_count * sizeof(Type*)); 
+        args_val = malloc(args_count * sizeof(LLVMValueRef)); 
+        size_t index = 0; 
+        LL_FOR_EACH(args->args_list, ll_node)
+        {
+            AST_arg_node* arg = ll_node->data; 
+            args_val[index] = code_gen_exp(arg->exp); 
+            args_type[index] = ast_exp_type(arg->exp); 
+            index++; 
+        }
+    }
+
+    /* search the function in the symbol table */ 
+    char* fun_name = ((AST_id_node*)call->id_node)->id_str; 
+    St_entry* fn_entry = find_fun(fun_name, args_type, args_count); 
+    if (!fn_entry)
+    {
+        fprintf(stderr, "Error: %s function is not declared or args does not match\n", fun_name); 
+        exit(3); 
+    }
+
+    LLVMValueRef result =  LLVMBuildCall2(builder, fn_entry->type_ref, fn_entry->value_ref, args_val, args_count, "calltemp"); 
+
+    call->fun_type = fn_entry->type; 
+    call->ret_type = ((Function_type*)call->fun_type)->return_type; 
+
+    /* clean up */ 
+    free(args_val); 
+    free(args_type); 
+    return result; 
+}
 
 //also include type resolution
 static LLVMValueRef code_gen_exp(AST_node* root)
@@ -245,7 +331,7 @@ static LLVMValueRef code_gen_exp(AST_node* root)
         case NODE_ID:
             {
                 AST_id_node* node = (AST_id_node*)root; 
-                St_entry* entry = st_find(sym_tab, node -> id_str); 
+                St_entry* entry = find_var(node -> id_str); 
                 if (entry == NULL)
                 {
                     fprintf(stderr, "Error: %s is not declared\n", node -> id_str);
@@ -255,10 +341,12 @@ static LLVMValueRef code_gen_exp(AST_node* root)
                 node -> id_type = entry -> type; 
 
                 return LLVMBuildLoad2(builder, type_to_llvm_type(entry -> type), 
-                        entry -> id_alloca, "loaded_var"); 
+                        entry -> value_ref, "loaded_var"); 
             }
         case NODE_OP: 
             return code_gen_op(root); 
+        case NODE_CALL: 
+            return code_gen_call(root); 
         default: 
             fprintf(stderr, "Error: bad ast node not an expression.\n"); 
             exit(3); 
@@ -273,14 +361,14 @@ static LLVMValueRef code_gen_id(AST_node* root)
         return NULL; 
 
     AST_id_node* node = (AST_id_node*)root; 
-    St_entry* entry = st_find(sym_tab, node -> id_str); 
+    St_entry* entry = find_var(node -> id_str); 
     if (entry == NULL)
     {
         fprintf(stderr, "Error: %s is not declared\n", node -> id_str);
         exit(3); 
     }
     node -> id_type = entry -> type; 
-    return entry -> id_alloca; 
+    return entry -> value_ref; 
 }
 
 static void code_gen_if_stmt(AST_node* root)
@@ -330,7 +418,7 @@ static void code_gen_if_stmt(AST_node* root)
             LLVMPositionBuilderAtEnd(builder, elif_block); 
 
             prev_cond = code_gen_exp(branch_node -> cond); 
-            if (ast_exp_val_type(branch_node -> cond) != VAL_BOOL)
+            if (!type_equal(ast_exp_type(branch_node -> cond),TYPE_BOOL))
             {
                 fprintf(stderr,"Error: the condition for the if statement is not a booleen\n"); 
                 exit(3); 
@@ -499,10 +587,10 @@ static void code_gen_stmt(AST_node* root)
                 LLVMValueRef dest_ref = code_gen_id(node -> dest); 
                 LLVMValueRef val_ref = code_gen_exp(node -> assign_exp); 
 
-                Value_type dest_type = ast_exp_val_type(node -> dest); 
-                Value_type exp_type = ast_exp_val_type(node -> assign_exp); 
+                Type* dest_type = ast_exp_type(node -> dest); 
+                Type* exp_type = ast_exp_type(node -> assign_exp); 
 
-                Value_type assign_type = type_resolve_assign(dest_type, exp_type); 
+                Type* assign_type = type_resolve_assign(dest_type, exp_type); 
 
                 LLVMValueRef cexp = cast_if_needed(val_ref, exp_type, assign_type); 
 
@@ -522,6 +610,26 @@ static void code_gen_stmt(AST_node* root)
         case NODE_DOWHILE: 
             code_gen_dowhile_stmt(root);
             break; 
+        case NODE_RETURN: 
+            {
+                if (!current_fn_ret_type)
+                {
+                    fprintf(stderr,"Error: return statement in void function\n"); 
+                    exit(3); 
+                }
+
+                AST_return_node* node = (AST_return_node*)root; 
+                LLVMValueRef ret_ref = code_gen_exp(node->exp); 
+                Type* ret_type = ast_exp_type(node->exp); 
+                if (!type_equal(ret_type, current_fn_ret_type)) 
+                {
+                    fprintf(stderr,"Error: return statement with wrong type\n"); 
+                    exit(3); 
+                }
+
+                LLVMBuildRet(builder, ret_ref);  
+            }
+            break; 
         default: 
             
         fprintf(stderr, "Error : bad ast node not a statement\n"); 
@@ -529,8 +637,84 @@ static void code_gen_stmt(AST_node* root)
     }
 }
 
+static void code_gen_subprograms(AST_node* subprograms)
+{
+    AST_subprograms_node* node = (AST_subprograms_node*)subprograms; 
+    LL_FOR_EACH(node->functions_list, ll_node)
+    {
+        AST_node* fn_node = ll_node->data;  
+        code_gen_function(fn_node); 
+    }
+}
+
+static void code_gen_function(AST_node* function)
+{
+    AST_function_node* fn = (AST_function_node*)function; 
+    AST_params_node* params = (AST_params_node*)fn->params; 
+    size_t params_count = 0; 
+    Type** param_types = NULL; 
+    char** param_names = NULL; 
+    LLVMTypeRef* llvm_param_types = NULL; 
+
+    /* iterate over every paramater */ 
+    if (params != NULL)
+    {
+        params_count = LL_size(params->params_list); 
+        param_types = malloc(params_count * sizeof(Type*));
+        param_names = malloc(params_count * sizeof(char*)); 
+        llvm_param_types = malloc(params_count * sizeof(LLVMTypeRef));
+        size_t index = 0; 
+        LL_FOR_EACH(params->params_list, ll_node)        
+        {
+            AST_param_node* param = ll_node->data; 
+            param_names[index] = ((AST_id_node*)param->id_node)->id_str; 
+            param_types[index] = param->id_type;  
+            llvm_param_types[index] = type_to_llvm_type(param_types[index]); 
+            index++; 
+        }
+    }
+
+    
+    /* create function type and insert it into the global symbol table */ 
+    char* fun_name = ((AST_id_node*)fn->id_node)->id_str; 
+    Type* func_type = type_function_create(fn->ret_type, param_types, params_count);
+    LLVMTypeRef llvm_func_type = LLVMFunctionType(type_to_llvm_type(fn->ret_type), llvm_param_types, params_count, 0); 
+    LLVMValueRef func_ref= LLVMAddFunction(module, fun_name, llvm_func_type); 
+    st_insert_fun(global_sym_tab, fun_name, func_type, func_ref, llvm_func_type); 
+
+    /* create a local symbol table */ 
+    current_sym_tab = st_create(); 
+    current_fn_ret_type = fn->ret_type; 
+    
+    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(func_ref, "entry");
+    LLVMPositionBuilderAtEnd(builder, entry);
+
+    LLVMValueRef param_alloca; 
+    for (size_t i = 0; i < params_count; i++) 
+    {
+        param_alloca = LLVMBuildAlloca(builder, llvm_param_types[i], param_names[i]);
+        LLVMBuildStore(builder, LLVMGetParam(func_ref, i), param_alloca);
+        st_insert_var(current_sym_tab, param_names[i], param_types[i], param_alloca);
+    }
+
+    /* populate local sym table */ 
+    populate_sym_table(fn->declarations); 
+
+    /* generate statments */ 
+    code_gen_stmt(fn->statements); 
+
+    free(llvm_param_types); 
+    free(param_names); 
+    /* free the local symbol table */ 
+    st_free(current_sym_tab); 
+    current_sym_tab = NULL; 
+    current_fn_ret_type = NULL;
+}
+
 void code_gen_ir(AST_node* program_node)
 {
+    //code generating subprograms 
+    code_gen_subprograms(((AST_program_node*)program_node)->subprograms); 
     
     //creating a main function without arguments
     LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), NULL, 0, 0);
@@ -539,8 +723,10 @@ void code_gen_ir(AST_node* program_node)
     //creating entry basic block 
     LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_function, "entry");
     LLVMPositionBuilderAtEnd(builder, entry);
-    
+
     //allocate variables in the stack
+    //* it's the main function there is no local symtoble so make it point to the gloable table *//  
+    current_sym_tab = global_sym_tab; 
     populate_sym_table(((AST_program_node*) program_node) -> declarations); 
 
     //statements ir generation

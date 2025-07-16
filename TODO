@@ -1,14 +1,6 @@
-complete new types like arrays and structs 
-
-complete function handling
-
-add strings
-
 complete the language grammar 
 
-codegen code is a mess
-
-complete llvm ir generation 
+clean code
 
 add tests
 
