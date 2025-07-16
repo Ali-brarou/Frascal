@@ -89,6 +89,10 @@ int st_insert_var(Symbol_table* table, char* name, Type* type, LLVMValueRef id_a
 
 int st_insert_fun(Symbol_table* table, char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
 {
+    Function_type* type = (Function_type*)fun_type; 
+    if (st_find_fun(table, name, type->param_types, type->param_count) != NULL)
+        return ST_ALREADY_DECLARED; 
+
     St_entry* entry = st_create_fun_entry(name, fun_type, fun_ref, llvm_fun_type); 
     unsigned index = st_hash(name); 
     LL_insert_back(table->buckets[index], entry); 
@@ -114,7 +118,7 @@ St_entry* st_find_var(Symbol_table* table, char* name)
 
 static bool is_entry_fn_equal(St_entry* entry, char* name, Type** args, size_t args_count)
 {
-    if (!strcmp(name, entry->name))
+    if (strcmp(name, entry->name))
         return false; 
     if (entry->type->kind != TYPE_FUNCTION)
         return false; 

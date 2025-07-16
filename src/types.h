@@ -23,8 +23,9 @@ typedef union Const_value_u {
 
 typedef enum Type_kind_e {
     TYPE_PRIMITIVE, 
-    TYPE_ARRAY, 
     TYPE_FUNCTION, 
+    TYPE_NAMED,  /* new types */ 
+    TYPE_ARRAY, 
 } Type_kind; 
 
 typedef struct Type_s {
@@ -52,6 +53,13 @@ typedef struct Primitive_type_s {
     
     Value_type val_type; 
 } Primitive_type;  
+
+/* symbol table has the ownership */
+typedef struct Named_type_s {
+    Type_kind kind; 
+    
+    Type* actual_type;  
+} Name_type;
 
 typedef enum Op_e {
     //arithmatique
@@ -90,6 +98,7 @@ bool type_equal(Type* type_a, Type* type_b);
 
 Type* type_primitive_create(Value_type val_type); 
 Type* type_function_create(Type* return_type, Type** param_types, size_t param_count);
+Type* type_named_create(Type* actual_type); 
 void type_free(Type* type);  
 
 bool op_rel(Op_type op); /* check whether an operation is a relational operation */

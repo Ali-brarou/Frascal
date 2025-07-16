@@ -15,6 +15,7 @@ typedef Linkedlist Entries_llist;
 typedef enum Entry_kind_e {
     ENTRY_FUN, 
     ENTRY_VAR, 
+    ENTRY_TYPE, /* user defined types */ 
 } Entry_kind; 
 
 

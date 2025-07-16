@@ -680,7 +680,12 @@ static void code_gen_function(AST_node* function)
     Type* func_type = type_function_create(fn->ret_type, param_types, params_count);
     LLVMTypeRef llvm_func_type = LLVMFunctionType(type_to_llvm_type(fn->ret_type), llvm_param_types, params_count, 0); 
     LLVMValueRef func_ref= LLVMAddFunction(module, fun_name, llvm_func_type); 
-    st_insert_fun(global_sym_tab, fun_name, func_type, func_ref, llvm_func_type); 
+    if (st_insert_fun(global_sym_tab, fun_name, func_type, func_ref, llvm_func_type) 
+            == ST_ALREADY_DECLARED)
+    {
+            fprintf(stderr, "Error : function %s defined twice\n", fun_name); 
+            exit(3); 
+    }
 
     /* create a local symbol table */ 
     current_sym_tab = st_create(); 

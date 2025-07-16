@@ -29,6 +29,7 @@ debut
     pour i de -5 a 30 faire 
     fin pour
 
+    y := test(y + 1)
     x := 1 
     repeter 
         x := 1
