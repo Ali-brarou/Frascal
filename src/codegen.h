@@ -9,6 +9,7 @@
 
 #include "ast.h"
 #include "symboltable.h"
+#include "builtins.h"
 
 void code_gen_ir(AST_node* program_node);   
 

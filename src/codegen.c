@@ -14,7 +14,6 @@ static LLVMValueRef printf_ref;
 // note: both code_gen_id and code_gen_exp can take id_node as input 
 //      first one returns a pointer for assignment 
 //      and the other retunrs a value for expressions
-static LLVMTypeRef type_to_llvm_type(Type* type); 
 static LLVMValueRef cast_if_needed(LLVMValueRef value, Type* val_type, Type* dest_type); 
 static void code_gen_subprograms(AST_node* subprograms); 
 static void code_gen_function(AST_node* function); 
@@ -40,6 +39,10 @@ void code_gen_init()
 
     //set up the symbol table 
     global_sym_tab = st_create(); 
+
+    //define builtins functions 
+    builtins_init(module); 
+    builtins_add_to_symtab(global_sym_tab); 
 
     //declare external functions like printf 
 
@@ -83,30 +86,6 @@ static St_entry* find_fun(char* name, Type** args, size_t args_count)
     return st_find_fun(global_sym_tab, name, args, args_count); 
 }
 
-
-static LLVMTypeRef type_to_llvm_type(Type* type)
-{
-    if (type->kind != TYPE_PRIMITIVE)
-    {
-        fprintf(stderr, "not implemented yet\n"); 
-        exit(3); 
-    }
-    switch (((Primitive_type*)type) -> val_type)
-    {
-        case VAL_INT:
-            return LLVMInt32Type(); 
-        case VAL_FLOAT: 
-            return LLVMFloatType(); 
-        case VAL_BOOL: 
-            return LLVMInt1Type(); 
-        case VAL_CHAR: 
-            return LLVMInt8Type(); 
-        default: 
-            fprintf(stderr, "Error: unkown type\n"); 
-            exit(3); 
-    }
-    return NULL; 
-}
 
 static LLVMValueRef cast_if_needed(LLVMValueRef value, Type* val_type, Type* dest_type)
 {
@@ -657,8 +636,8 @@ static void code_gen_print_stmt(AST_node* root)
     {
         if (type_equal(args_type[i], TYPE_BOOL))
         {
-            LLVMValueRef true_str = LLVMBuildGlobalStringPtr(builder, "true", "true_str");
-            LLVMValueRef false_str = LLVMBuildGlobalStringPtr(builder, "false", "false_str");
+            LLVMValueRef true_str = LLVMBuildGlobalStringPtr(builder, "vrai", "true_str");
+            LLVMValueRef false_str = LLVMBuildGlobalStringPtr(builder, "faux", "false_str");
 
             LLVMValueRef is_true = LLVMBuildICmp(builder, LLVMIntNE, args_val[i],
                                     LLVMConstInt(LLVMInt1Type(), 0, 0), "bool_cmp");
@@ -826,10 +805,11 @@ static void code_gen_function(AST_node* function)
     /* generate statments */ 
     code_gen_stmt(fn->statements); 
 
+    /*clean up */ 
+    free(param_types); 
     free(llvm_param_types); 
     free(param_names); 
-    /* free the local symbol table */ 
-    st_free(current_sym_tab); 
+    st_free(current_sym_tab); /* free the local symbol table */ 
     current_sym_tab = NULL; 
     current_fn_ret_type = NULL;
 }

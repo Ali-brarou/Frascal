@@ -41,11 +41,11 @@ void st_free(Symbol_table* table);
 #define ST_ALREADY_DECLARED  1
 /* return insert success if success */
 /* otherwise already declared if it's already declared duh */
-int st_insert_var(Symbol_table* table, char* name, Type* type, LLVMValueRef id_alloca); 
-int st_insert_fun(Symbol_table* table, char* name, Type* type, LLVMValueRef function, LLVMTypeRef fun_type); 
+int st_insert_var(Symbol_table* table, const char* name, Type* type, LLVMValueRef id_alloca); 
+int st_insert_fun(Symbol_table* table, const char* name, Type* type, LLVMValueRef function, LLVMTypeRef fun_type); 
 
-St_entry* st_find_var(Symbol_table* table, char* name); 
+St_entry* st_find_var(Symbol_table* table, const char* name); 
 /* function overloading so you need to pass also args type */ 
-St_entry* st_find_fun(Symbol_table* table, char* name, Type** args, size_t args_count); 
+St_entry* st_find_fun(Symbol_table* table, const char* name, Type** args, size_t args_count); 
 
 #endif

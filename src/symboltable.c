@@ -1,9 +1,10 @@
 #include "symboltable.h"
 
-static St_entry* st_create_var_entry(char* name, Type* type, LLVMValueRef value_ref); 
+static St_entry* st_create_var_entry(const char* name, Type* type, LLVMValueRef value_ref); 
+static St_entry* st_create_fun_entry(const char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type); 
 static void st_free_entry(void* entry); 
 
-static unsigned int st_hash(char* key)
+static unsigned int st_hash(const char* key)
 {
     //djb2 hash
     unsigned long hash = 5381;
@@ -38,7 +39,7 @@ void st_free(Symbol_table* table)
     free(table); 
 }
 
-static St_entry* st_create_var_entry(char* name, Type* type, LLVMValueRef id_alloca)
+static St_entry* st_create_var_entry(const char* name, Type* type, LLVMValueRef id_alloca)
 {
     St_entry* entry = malloc(sizeof(St_entry));
     
@@ -50,7 +51,7 @@ static St_entry* st_create_var_entry(char* name, Type* type, LLVMValueRef id_all
     return (St_entry*)entry; 
 }
 
-static St_entry* st_create_fun_entry(char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
+static St_entry* st_create_fun_entry(const char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
 {
     St_entry* entry = malloc(sizeof(St_entry));
     
@@ -75,7 +76,7 @@ static void st_free_entry(void* entry)
     free(entry); 
 }
 
-int st_insert_var(Symbol_table* table, char* name, Type* type, LLVMValueRef id_alloca)
+int st_insert_var(Symbol_table* table, const char* name, Type* type, LLVMValueRef id_alloca)
 {
     if (st_find_var(table, name) != NULL)
         return ST_ALREADY_DECLARED; 
@@ -87,7 +88,7 @@ int st_insert_var(Symbol_table* table, char* name, Type* type, LLVMValueRef id_a
     return ST_INSERT_SUCCESS; 
 }
 
-int st_insert_fun(Symbol_table* table, char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
+int st_insert_fun(Symbol_table* table, const char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
 {
     Function_type* type = (Function_type*)fun_type; 
     if (st_find_fun(table, name, type->param_types, type->param_count) != NULL)
@@ -100,7 +101,7 @@ int st_insert_fun(Symbol_table* table, char* name, Type* fun_type, LLVMValueRef 
     return ST_INSERT_SUCCESS; 
 }
 
-St_entry* st_find_var(Symbol_table* table, char* name)
+St_entry* st_find_var(Symbol_table* table, const char* name)
 {
     unsigned index = st_hash(name); 
 
@@ -116,7 +117,7 @@ St_entry* st_find_var(Symbol_table* table, char* name)
     return NULL; 
 }
 
-static bool is_entry_fn_equal(St_entry* entry, char* name, Type** args, size_t args_count)
+static bool is_entry_fn_equal(St_entry* entry, const char* name, Type** args, size_t args_count)
 {
     if (strcmp(name, entry->name))
         return false; 
@@ -133,7 +134,7 @@ static bool is_entry_fn_equal(St_entry* entry, char* name, Type** args, size_t a
     return true; 
 }
 
-St_entry* st_find_fun(Symbol_table* table, char* name, Type** args, size_t args_count)
+St_entry* st_find_fun(Symbol_table* table, const char* name, Type** args, size_t args_count)
 {
     unsigned index = st_hash(name); 
 

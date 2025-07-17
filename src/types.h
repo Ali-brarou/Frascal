@@ -4,6 +4,8 @@
 #include <stdbool.h> 
 #include <stdio.h> 
 #include <stdlib.h>  
+#include <string.h> 
+#include <llvm-c/Core.h>
 
 #define VAL_TYPE_LAST VAL_CHAR
 typedef enum Value_type_e {
@@ -98,6 +100,7 @@ bool type_equal(Type* type_a, Type* type_b);
 
 #define TYPE_IS_PRIMITIVE(t) ((t)->kind == TYPE_PRIMITIVE)
 Type* type_primitive_create(Value_type val_type); 
+/* warning: the array will be copied */ 
 Type* type_function_create(Type* return_type, Type** param_types, size_t param_count);
 Type* type_named_create(Type* actual_type); 
 void type_free(Type* type);  
@@ -107,5 +110,7 @@ bool op_unary(Op_type op); /* check whether an operation is a unary operation */
 #define op_binary(op) (!op_unary(op)) 
 Type* type_resolve_op(Type* left, Type* right, Op_type op); 
 Type* type_resolve_assign(Type* dest, Type* exp); 
+
+LLVMTypeRef type_to_llvm_type(Type* type);
 
 #endif

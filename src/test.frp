@@ -10,12 +10,27 @@ debut
     fin tant que
     retourner (i * i > x)
 fin
+fonction fact(x: entier): entier
+TDOL
+    p: entier
+    i: entier
+debut 
+    p := 1 
+    pour i de 1 a x faire 
+        p := p * i
+    fin pour
+    retourner p
+fin 
 TDOG
     i: entier
 debut
+    ecrire(fact(10))
     pour i de 2 a 100 faire 
-        si (est_premier(i) = vrai) alors
-            ecrire(i) 
-        finsi 
+        si (est_premier(i)) alors
+            ecrire(i, vrai)
+        sinon 
+            ecrire(i, faux)
+        finsi
     fin pour
+    ecrire(ord('a') + 3)
 fin

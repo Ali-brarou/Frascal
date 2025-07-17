@@ -59,7 +59,12 @@ Type* type_function_create(Type* return_type, Type** param_types, size_t param_c
 
     type->kind = TYPE_FUNCTION; 
     type->return_type = return_type; 
-    type->param_types = param_types; 
+    type->param_types = NULL; 
+    if (param_count > 0)
+    {
+        type->param_types = malloc(param_count * sizeof(Type*)); 
+        memcpy(type->param_types, param_types, param_count * sizeof(Type*)); 
+    }
     type->param_count = param_count; 
 
     return (Type*) type; 
@@ -262,3 +267,27 @@ Type* type_resolve_assign(Type* dest, Type* exp)
     return NULL; 
 }
 
+
+LLVMTypeRef type_to_llvm_type(Type* type)
+{
+    if (!TYPE_IS_PRIMITIVE(type))
+    {
+        fprintf(stderr, "not implemented yet\n");
+        exit(3);
+    }
+    switch (((Primitive_type*)type) -> val_type)
+    {
+        case VAL_INT:
+            return LLVMInt32Type();
+        case VAL_FLOAT:
+            return LLVMFloatType();
+        case VAL_BOOL:
+            return LLVMInt1Type();
+        case VAL_CHAR:
+            return LLVMInt8Type();
+        default:
+            fprintf(stderr, "Error: bad type\n");
+            exit(3);
+    }
+    return NULL;
+}

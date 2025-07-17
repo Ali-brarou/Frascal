@@ -1,7 +1,12 @@
-CC 		= gcc
-CFLAGS 	= -Wall -Wextra -g `llvm-config --cflags --libs core` -fsanitize=address
+CC 		:= gcc
+CFLAGS 	:= -Wall -Wextra -g `llvm-config --cflags` -fsanitize=address
+LDFLAGS := `llvm-config --libs core` 
 
-all: frascal
+SRC := main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c builtins.c 
+
+TARGET := frascal
+
+all: $(TARGET)
 
 parser.c: parser.y
 	bison -d -g -o $@ $^
@@ -11,21 +16,22 @@ parser.h: parser.c
 lexer.c: lexer.l 
 	flex -o $@ $^
 
-frascal: main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c
-	$(CC) main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c $(CFLAGS) -o $@
+$(TARGET): $(SRC) 
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+	@echo "Finished compiling $(TARGET)"
 
 
 .PHONY: memcheck
 memcheck: 
-	valgrind --leak-check=full --show-leak-kinds=all ./frascal test.frp
+	valgrind --leak-check=full --show-leak-kinds=all ./$(TARGET) test.frp
 
 .PHONY: test 
 test: 
-	./frascal test.frp 
-	llc out.ll -o out.s
-	gcc out.s -no-pie -o test
+	./$(TARGET) test.frp 
+	llc -relocation-model=pic out.ll -o out.s
+	gcc out.s -fPIE -pie -o test
 	./test
 
 .PHONY: clean
 clean : 
-	rm -rf lexer.c parser.c parser.h frascal parser.gv parser.png out.ll a.out out.s test
+	rm -rf lexer.c parser.c parser.h $(TARGET) parser.gv parser.png out.ll a.out out.s test

@@ -404,7 +404,6 @@ void AST_tree_free(void* tree)
             {
                 AST_var_declaration_node* node = (AST_var_declaration_node*)root_node; 
                 AST_tree_free(node -> id_node);
-                type_free(node -> id_type); 
             }
             break; 
         case NODE_FUN_DECLARATION: 
