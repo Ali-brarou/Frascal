@@ -1,38 +1,21 @@
-TDNT
-fonction test(x: entier): entier
-TDO   
-    y: entier
+fonction est_premier(x: entier): booleen
+TDOL 
+    test: booleen
+    i: entier
 debut 
-    retourner x
-fin 
-TDO
-    x: reel
-    y: entier 
-    i: entier 
-    w: booleen 
-    f: caractere
+    test := vrai
+    i := 2
+    tant que ((i * i <= x) et (x MOD i != 0)) faire
+        i := i + 1
+    fin tant que
+    retourner (i * i > x)
+fin
+TDOG
+    i: entier
 debut
-    f := 'c'
-    y := 0
-    x := 3
-    x := 5 + 3 - y
-    si x=2 alors 
-        y := 3 
-    sinon si x = 3 alors 
-        y := 2
-    sinon
-        y := 3
-    finsi
-    
-    x := 3.2 + 4
-
-    pour i de -5 a 30 faire 
+    pour i de 2 a 100 faire 
+        si (est_premier(i) = vrai) alors
+            ecrire(i) 
+        finsi 
     fin pour
-
-    y := test(y + 1)
-    x := 1 
-    repeter 
-        x := 1
-    jusqu'a (faux)
-
 fin

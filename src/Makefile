@@ -22,7 +22,10 @@ memcheck:
 .PHONY: test 
 test: 
 	./frascal test.frp 
+	llc out.ll -o out.s
+	gcc out.s -no-pie -o test
+	./test
 
 .PHONY: clean
 clean : 
-	rm -rf lexer.c parser.c parser.h frascal parser.gv parser.png out.ll
+	rm -rf lexer.c parser.c parser.h frascal parser.gv parser.png out.ll a.out out.s test

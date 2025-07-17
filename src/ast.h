@@ -43,6 +43,7 @@ typedef enum Node_type_e {
     NODE_WHILE, 
     NODE_DOWHILE, 
     NODE_RETURN, 
+    NODE_PRINT, 
     //expressions
     NODE_OP, 
     NODE_CONST,  
@@ -222,6 +223,12 @@ typedef struct AST_return_node_s {
     AST_node* exp; 
 } AST_return_node; 
 
+typedef struct AST_print_node_s {
+    Node_type type; 
+
+    AST_node* args; 
+} AST_print_node; 
+
 typedef struct AST_op_nodes_s {
     Node_type type; 
 
@@ -296,6 +303,7 @@ AST_node *ast_for_node_create(AST_node* iter, AST_node* from, AST_node* to, AST_
 AST_node *ast_while_node_create(AST_node* cond, AST_node* stmts); 
 AST_node *ast_dowhile_node_create(AST_node* cond, AST_node* stmts); 
 AST_node *ast_return_node_create(AST_node* exp); 
+AST_node *ast_print_node_create(AST_node* args); 
 
 
 //expressions

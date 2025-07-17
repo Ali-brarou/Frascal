@@ -251,6 +251,15 @@ AST_node *ast_return_node_create(AST_node* exp)
     return (AST_node*) node; 
 }
 
+AST_node *ast_print_node_create(AST_node* args)
+{
+    NODE_CREATE(node, AST_print_node, NODE_PRINT); 
+
+    node->args = args; 
+    
+    return (AST_node*) node; 
+}
+
 Type* ast_exp_type(AST_node* exp_node)
 {
     if (exp_node == NULL)
@@ -466,6 +475,12 @@ void AST_tree_free(void* tree)
             {
                 AST_return_node* node = (AST_return_node*)root_node; 
                 AST_tree_free(node -> exp); 
+            }
+            break; 
+        case NODE_PRINT: 
+            {
+                AST_print_node* node = (AST_print_node*)root_node; 
+                AST_tree_free(node->args); 
             }
             break; 
         case NODE_OP: 

@@ -24,7 +24,7 @@
 
 WHITESPACE [ \n\t\r]
 DIGIT [0-9]
-ID [a-z][a-z0-9]*
+ID [a-z_][a-z0-9_]*
 
 %%
 
@@ -75,11 +75,13 @@ ID [a-z][a-z0-9]*
 "ALGO"          {return TOKEN(T_ALGO);}
 "fonction"      {return TOKEN(T_FUNC);}
 "procedure"     {return TOKEN(T_PROC);}
+"ecrire"        {return TOKEN(T_PRINT);}
 "debut"         {return TOKEN(T_BEGIN);}
 "fin"           {return TOKEN(T_END);}
 "retourner"     {return TOKEN(T_RETURN);}
 "TDNT"          {return TOKEN(T_TDNT);}
-"TDO"           {return TOKEN(T_TDO);}
+"TDOL"           {return TOKEN(T_TDOL);}
+"TDOG"           {return TOKEN(T_TDOG);}
 "entier"        {return TOKEN(T_TYPEINT);}
 "reel"          {return TOKEN(T_TYPEFLOAT);}
 "booleen"       {return TOKEN(T_TYPEBOOL);}

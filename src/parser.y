@@ -38,13 +38,14 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 %token <tok> T_TYPEINT T_TYPEFLOAT T_TYPEBOOL T_TYPECHAR
 %token <tok> T_PLUS T_MINUS T_MULT T_DIV T_IDIV T_MOD T_AND T_OR T_NOT
 %token <tok> T_ASSIGN T_EQ T_NEQ T_LT T_GT T_LE T_GE T_COLON T_COMMA T_LPAREN T_RPAREN T_AT
-%token <tok> T_ALGO T_FUNC T_PROC T_BEGIN T_END T_RETURN T_TDO T_TDNT
+%token <tok> T_ALGO T_FUNC T_PROC T_BEGIN T_END T_RETURN T_TDOL T_TDOG T_TDNT
 %token <tok> T_IF T_ELSE T_ENDIF T_THEN T_WHILE T_ENDWHILE T_FOR T_ENDFOR T_DE T_TO T_DO
 %token <tok> T_REPEAT T_UNTILL 
+%token <tok> T_PRINT 
 
 
 // defining non terminals
-%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDO optional_TDO TDNT optional_TDNT optional_subprogram_defs subprogram_defs subprogram_def function_def optional_params params param optional_args args arg return_stmt call_fn
+%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDOG optional_TDOG optional_TDOL TDOL TDNT optional_TDNT optional_subprogram_defs subprogram_defs subprogram_def function_def optional_params params param print_stmt optional_args args arg return_stmt call_fn
 %type <type> type_ref 
 
 
@@ -70,7 +71,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 %define parse.error verbose
 
 %%
-    program : optional_TDNT optional_subprogram_defs optional_TDO T_BEGIN optional_statements T_END {program_node = ast_program_create($2, $3, $5);}
+    program : optional_TDNT optional_subprogram_defs optional_TDOG T_BEGIN optional_statements T_END {program_node = ast_program_create($2, $3, $5);}
 
     optional_TDNT: TDNT {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
@@ -90,7 +91,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
     subprogram_def: function_def {$$ = $1;}
 
-    function_def: T_FUNC id_ref T_LPAREN optional_params T_RPAREN T_COLON type_ref optional_TDO T_BEGIN optional_statements T_END {$$ = ast_function_create($2,$4,$8,$10,$7);}
+    function_def: T_FUNC id_ref T_LPAREN optional_params T_RPAREN T_COLON type_ref optional_TDOL T_BEGIN optional_statements T_END {$$ = ast_function_create($2,$4,$8,$10,$7);}
 
     optional_params: params {$$ = $1;}
         | /*empty*/ {$$ = NULL;}
@@ -100,11 +101,17 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
     param: id_ref T_COLON type_ref {$$ = ast_param_create($3, $1);} 
 
-    optional_TDO: TDO {$$ = $1;}
+    optional_TDOL: TDOL {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
     
-    TDO: T_TDO declarations {$$ = $2;}
-        | T_TDO {$$ = NULL;} /*empty tdo */ 
+    TDOL: T_TDOL declarations {$$ = $2;}
+        | T_TDOL {$$ = NULL;} /*empty tdo */ 
+
+    optional_TDOG: TDOG {$$ = $1;}
+                | /*empty*/ {$$ = NULL;}
+    
+    TDOG: T_TDOG declarations {$$ = $2;}
+        | T_TDOG {$$ = NULL;} /*empty tdo */ 
             
     declarations: declarations declaration {ast_decls_node_insert($1, $2);}
                 | declaration {$$ = ast_decls_node_create($1);} 
@@ -143,6 +150,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
                 | while_loop_stmt {$$ = $1;}
                 | dowhile_loop_stmt {$$ = $1;}
                 | return_stmt {$$ = $1;}
+                | print_stmt {$$ = $1;}
 
     assignment: id_ref T_ASSIGN expression {$$ = ast_assign_node_create($1, $3);}
 
@@ -166,6 +174,8 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     while_loop_stmt: T_WHILE expression T_DO optional_statements T_ENDWHILE {$$ = ast_while_node_create($2, $4);}
 
     dowhile_loop_stmt: T_REPEAT optional_statements T_UNTILL expression {$$ = ast_dowhile_node_create($4, $2);}
+
+    print_stmt: T_PRINT T_LPAREN optional_args T_RPAREN {$$ = ast_print_node_create($3);}
 
     return_stmt: T_RETURN expression {$$ = ast_return_node_create($2);}
 

@@ -8,6 +8,8 @@ static LLVMBuilderRef builder;
 static Symbol_table* global_sym_tab  = NULL; 
 static Symbol_table* current_sym_tab = NULL; /* represent local symbol table */ 
 static Type* current_fn_ret_type    = NULL; 
+static LLVMTypeRef printf_type; 
+static LLVMValueRef printf_ref; 
 
 // note: both code_gen_id and code_gen_exp can take id_node as input 
 //      first one returns a pointer for assignment 
@@ -22,6 +24,7 @@ static void code_gen_for_stmt(AST_node* root);
 static void code_gen_if_stmt(AST_node* root); 
 static void code_gen_while_stmt(AST_node* root); 
 static void code_gen_dowhile_stmt(AST_node* root); 
+static void code_gen_print_stmt(AST_node* root); 
 static LLVMValueRef code_gen_id(AST_node* root); 
 static LLVMValueRef code_gen_op(AST_node* root); 
 static LLVMValueRef code_gen_call(AST_node* root); 
@@ -37,6 +40,18 @@ void code_gen_init()
 
     //set up the symbol table 
     global_sym_tab = st_create(); 
+
+    //declare external functions like printf 
+
+    /* printf 
+     * return type : int
+     * argument : (char* , ...)
+     * isVarArg : true 
+     */
+    LLVMTypeRef printf_arg_types[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    printf_type = LLVMFunctionType(LLVMInt32Type(), printf_arg_types, 1, true); 
+    printf_ref = LLVMAddFunction(module, "printf", printf_type); 
+
 }
 
 void code_gen_cleanup()
@@ -424,8 +439,7 @@ static void code_gen_if_stmt(AST_node* root)
                 exit(3); 
             }
             prev_then_block = then_block; 
-    }
-
+        }
     }
 
     LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(current_function, "else_block"); 
@@ -564,6 +578,107 @@ static void code_gen_dowhile_stmt(AST_node* root)
     LLVMPositionBuilderAtEnd(builder, dowhile_end);
 }
 
+#define FMT_LEN 512
+#define MAX_PRINT_ARGS 128
+static char* gen_fmtstr(Type** args_type, size_t args_count)
+{
+    char fmt_str[FMT_LEN] = {0}; 
+    if (args_count >= MAX_PRINT_ARGS)
+    {
+        fprintf(stderr, "Error: a big number of arguments\n"); 
+        exit(3); 
+    }
+
+    for (size_t i = 0; i < args_count; i++)
+    {
+        const char* frag = NULL;   
+        if (!TYPE_IS_PRIMITIVE(args_type[i]))
+        {
+            fprintf(stderr, "Error: can't print non primitive types\n"); 
+            exit(3); 
+        }
+        switch (((Primitive_type*)args_type[i])->val_type)
+        {
+            case VAL_INT:   frag = "%d"; break;
+            case VAL_FLOAT: frag = "%f"; break;
+            case VAL_BOOL:  frag = "%s"; break;
+            case VAL_CHAR:  frag = "%c"; break;
+            case VAL_ERR: 
+                fprintf(stderr, "Error: bad type\n"); 
+                break; 
+        }
+        
+        if (i > 0) strncat(fmt_str, " ", FMT_LEN - strlen(fmt_str) - 1);
+        strncat(fmt_str, frag, FMT_LEN - strlen(fmt_str) - 1);
+    }
+    strncat(fmt_str, "\n", FMT_LEN - strlen(fmt_str) - 1);
+
+    return strdup(fmt_str); 
+}
+
+/* print will be a wrapper around printf */
+static void code_gen_print_stmt(AST_node* root)
+{
+    if (root == NULL)
+        return; 
+
+    AST_print_node* print = (AST_print_node*)root; 
+    AST_args_node* args = (AST_args_node*)print->args; 
+
+    size_t args_count = 0; 
+    Type** args_type = NULL; 
+    LLVMValueRef* args_val = NULL; 
+
+    if (args != NULL)
+    {
+        args_count = LL_size(args->args_list); 
+        args_type = malloc(args_count * sizeof(Type*)); 
+        args_val = malloc(args_count * sizeof(LLVMValueRef)); 
+        size_t index = 0; 
+        LL_FOR_EACH(args->args_list, ll_node)
+        {
+            AST_arg_node* arg = ll_node->data; 
+            args_val[index] = code_gen_exp(arg->exp); 
+            args_type[index] = ast_exp_type(arg->exp); 
+            index++; 
+        }
+    }
+
+    char* fmt_str = gen_fmtstr(args_type, args_count); 
+    LLVMValueRef fmt_global = LLVMBuildGlobalStringPtr(builder, fmt_str, "fmtstr");
+    free(fmt_str); 
+
+    size_t printf_args_count = args_count + 1;  
+
+    LLVMValueRef* printf_args = malloc(printf_args_count * sizeof(LLVMValueRef)); 
+    printf_args[0] = fmt_global; 
+
+    for (size_t i = 0; i < args_count; i++)
+    {
+        if (type_equal(args_type[i], TYPE_BOOL))
+        {
+            LLVMValueRef true_str = LLVMBuildGlobalStringPtr(builder, "true", "true_str");
+            LLVMValueRef false_str = LLVMBuildGlobalStringPtr(builder, "false", "false_str");
+
+            LLVMValueRef is_true = LLVMBuildICmp(builder, LLVMIntNE, args_val[i],
+                                    LLVMConstInt(LLVMInt1Type(), 0, 0), "bool_cmp");
+            printf_args[i + 1] = LLVMBuildSelect(builder, is_true, true_str, false_str, "bool_str");
+        }
+        else 
+        {
+            printf_args[i + 1] = args_val[i];
+        }
+
+    }
+
+    LLVMBuildCall2(builder, printf_type, printf_ref, printf_args, printf_args_count, ""); 
+
+    //clean up 
+    free(printf_args); 
+    free(args_type); 
+    free(args_val); 
+}
+
 static void code_gen_stmt(AST_node* root)
 {
     if (root == NULL)
@@ -629,6 +744,9 @@ static void code_gen_stmt(AST_node* root)
 
                 LLVMBuildRet(builder, ret_ref);  
             }
+            break; 
+        case NODE_PRINT: 
+            code_gen_print_stmt(root); 
             break; 
         default: 
             

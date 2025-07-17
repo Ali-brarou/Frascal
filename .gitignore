@@ -5,3 +5,6 @@
 /src/parser.gv
 /src/parser.png
 /src/out.ll
+/src/out.s
+/src/a.out
+/src/test

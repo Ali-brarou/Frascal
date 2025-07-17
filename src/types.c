@@ -65,6 +65,8 @@ Type* type_function_create(Type* return_type, Type** param_types, size_t param_c
     return (Type*) type; 
 }
 
+Type* type_named_create(Type* actual_type); 
+
 void type_free(Type* type)
 {
     if (!type || type_is_singelton(type))

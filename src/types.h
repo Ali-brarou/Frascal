@@ -96,6 +96,7 @@ void type_init(void);
 bool type_is_singelton(Type* type); 
 bool type_equal(Type* type_a, Type* type_b); 
 
+#define TYPE_IS_PRIMITIVE(t) ((t)->kind == TYPE_PRIMITIVE)
 Type* type_primitive_create(Value_type val_type); 
 Type* type_function_create(Type* return_type, Type** param_types, size_t param_count);
 Type* type_named_create(Type* actual_type); 
