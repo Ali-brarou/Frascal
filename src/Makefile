@@ -1,6 +1,6 @@
 CC 		:= gcc
-CFLAGS 	:= -Wall -Wextra -g `llvm-config --cflags` -fsanitize=address
-LDFLAGS := `llvm-config --libs core` 
+CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` #-fsanitize=address
+LDFLAGS	:= `llvm-config --libs core` 
 
 SRC := main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c builtins.c 
 

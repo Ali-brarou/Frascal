@@ -1,36 +1,49 @@
-fonction est_premier(x: entier): booleen
-TDOL 
-    test: booleen
-    i: entier
-debut 
-    test := vrai
-    i := 2
-    tant que ((i * i <= x) et (x MOD i != 0)) faire
-        i := i + 1
-    fin tant que
-    retourner (i * i > x)
-fin
-fonction fact(x: entier): entier
+fonction test_nested_if(x: entier, y: entier): entier
 TDOL
-    p: entier
-    i: entier
-debut 
-    p := 1 
-    pour i de 1 a x faire 
-        p := p * i
-    fin pour
-    retourner p
-fin 
-TDOG
-    i: entier
 debut
-    ecrire(fact(10))
-    pour i de 2 a 100 faire 
-        si (est_premier(i)) alors
-            ecrire(i, vrai)
+    si x > 0 alors
+        si y > 0 alors
+            retourner 1
         sinon 
-            ecrire(i, faux)
+            retourner 2
         finsi
-    fin pour
-    ecrire(ord('a') + 3)
+    sinon 
+        si y < 0 alors
+            retourner 3
+        sinon 
+            retourner 4
+        finsi
+    finsi
+    retourner 0  // fallback (should never be reached)
 fin
+
+TDOG
+    x: entier
+    b: entier
+debut
+    // Test case 1: x > 0, y > 0 → should return 1
+    x := 5
+    b := 10
+    ecrire(test_nested_if(x, b))
+
+    // Test case 2: x > 0, y ≤ 0 → should return 2
+    x := 3
+    b := 0
+    ecrire(test_nested_if(x, b))
+
+    // Test case 3: x ≤ 0, y < 0 → should return 3
+    x := -1
+    b := -5
+    ecrire(test_nested_if(x, b))
+
+    // Test case 4: x ≤ 0, y ≥ 0 → should return 4
+    x := 0
+    b := 2
+    ecrire(test_nested_if(x, b))
+
+    
+    x := 999
+    b := 999
+    ecrire(test_nested_if(x, b))
+fin
+

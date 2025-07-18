@@ -8,6 +8,7 @@ static LLVMBuilderRef builder;
 static Symbol_table* global_sym_tab  = NULL; 
 static Symbol_table* current_sym_tab = NULL; /* represent local symbol table */ 
 static Type* current_fn_ret_type    = NULL; 
+bool current_block_terminated = false; 
 static LLVMTypeRef printf_type; 
 static LLVMValueRef printf_ref; 
 
@@ -365,6 +366,16 @@ static LLVMValueRef code_gen_id(AST_node* root)
     return entry -> value_ref; 
 }
 
+static void insert_last_block_if_needed(Linkedlist* buffer) 
+{
+    if (!current_block_terminated)
+    {
+        LLVMBasicBlockRef last_block = LLVMGetInsertBlock(builder);
+        LL_insert_back(buffer, last_block); 
+    }
+    current_block_terminated = false; 
+}
+
 static void code_gen_if_stmt(AST_node* root)
 {
     if (root == NULL)
@@ -384,7 +395,7 @@ static void code_gen_if_stmt(AST_node* root)
 
     LLVMPositionBuilderAtEnd(builder, then_block); 
     code_gen_stmt(node -> action); 
-    LL_insert_back(merge_buffer, then_block); 
+    insert_last_block_if_needed(merge_buffer); 
     LLVMPositionBuilderAtEnd(builder, if_block); 
 
     LLVMValueRef prev_cond = code_gen_exp(node -> cond); 
@@ -408,7 +419,7 @@ static void code_gen_if_stmt(AST_node* root)
             LLVMBuildCondBr(builder, prev_cond, prev_then_block, elif_block); 
             LLVMPositionBuilderAtEnd(builder, then_block); 
             code_gen_stmt(branch_node -> action); 
-            LL_insert_back(merge_buffer, then_block); 
+            insert_last_block_if_needed(merge_buffer); 
             LLVMPositionBuilderAtEnd(builder, elif_block); 
 
             prev_cond = code_gen_exp(branch_node -> cond); 
@@ -427,7 +438,7 @@ static void code_gen_if_stmt(AST_node* root)
 
     LLVMPositionBuilderAtEnd(builder, else_block); 
     code_gen_stmt(node -> else_action); 
-    LL_insert_back(merge_buffer, else_block); 
+    insert_last_block_if_needed(merge_buffer); 
 
     //mergin all then blocks
     LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(current_function, "merge_block"); 
@@ -650,7 +661,7 @@ static void code_gen_print_stmt(AST_node* root)
 
     }
 
-    LLVMBuildCall2(builder, printf_type, printf_ref, printf_args, printf_args_count, ""); 
+    LLVMBuildCall2(builder, printf_type, printf_ref, printf_args, printf_args_count, "print_calltmp"); 
 
     //clean up 
     free(printf_args); 
@@ -662,6 +673,16 @@ static void code_gen_stmt(AST_node* root)
 {
     if (root == NULL)
         return; 
+
+    if (current_block_terminated) 
+    {   
+        LLVMValueRef current_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
+        LLVMBasicBlockRef cont = LLVMAppendBasicBlock(current_function, "after_ret");
+        LLVMPositionBuilderAtEnd(builder, cont);
+
+        current_block_terminated = false;      
+    }
+
 
     switch (root -> type)
     {
@@ -722,6 +743,7 @@ static void code_gen_stmt(AST_node* root)
                 }
 
                 LLVMBuildRet(builder, ret_ref);  
+                current_block_terminated = true; 
             }
             break; 
         case NODE_PRINT: 
@@ -805,6 +827,13 @@ static void code_gen_function(AST_node* function)
     /* generate statments */ 
     code_gen_stmt(fn->statements); 
 
+    if (!current_block_terminated)
+    {
+        fprintf(stderr, "Error: missing a return statement\n"); 
+        exit(3); 
+    }
+
+
     /*clean up */ 
     free(param_types); 
     free(llvm_param_types); 
@@ -812,6 +841,7 @@ static void code_gen_function(AST_node* function)
     st_free(current_sym_tab); /* free the local symbol table */ 
     current_sym_tab = NULL; 
     current_fn_ret_type = NULL;
+    current_block_terminated = false; 
 }
 
 void code_gen_ir(AST_node* program_node)
