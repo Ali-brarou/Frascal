@@ -21,6 +21,7 @@ static void code_gen_function(AST_node* function);
 static void populate_sym_table(AST_node* decls); 
 static void code_gen_stmt(AST_node* root); 
 static void code_gen_for_stmt(AST_node* root); 
+static void insert_last_block_if_needed(Linkedlist* buffer); /* helper function for if code gen */ 
 static void code_gen_if_stmt(AST_node* root); 
 static void code_gen_while_stmt(AST_node* root); 
 static void code_gen_dowhile_stmt(AST_node* root); 
@@ -494,7 +495,9 @@ static void code_gen_for_stmt(AST_node* root)
     //body of the loop 
     LLVMPositionBuilderAtEnd(builder, for_body);
     code_gen_stmt(node->statements); 
-    LLVMBuildBr(builder, for_inc); 
+    if (!current_block_terminated)
+        LLVMBuildBr(builder, for_inc);
+    current_block_terminated = false; 
 
     //increment block
     LLVMPositionBuilderAtEnd(builder, for_inc);
@@ -533,7 +536,9 @@ static void code_gen_while_stmt(AST_node* root)
 
     LLVMPositionBuilderAtEnd(builder, while_body);
     code_gen_stmt(node -> statements); 
-    LLVMBuildBr(builder, while_cond); 
+    if (!current_block_terminated)
+        LLVMBuildBr(builder, while_cond);
+    current_block_terminated = false; 
     LLVMPositionBuilderAtEnd(builder, while_end);
     
 }
@@ -554,7 +559,9 @@ static void code_gen_dowhile_stmt(AST_node* root)
     LLVMBuildBr(builder, dowhile_body); 
     LLVMPositionBuilderAtEnd(builder, dowhile_body);
     code_gen_stmt(node -> statements); 
-    LLVMBuildBr(builder, dowhile_cond); 
+    if (!current_block_terminated)
+        LLVMBuildBr(builder, dowhile_cond);
+    current_block_terminated = false; 
 
     LLVMPositionBuilderAtEnd(builder, dowhile_cond);
     LLVMValueRef cond = code_gen_exp(node -> cond); 
@@ -872,7 +879,7 @@ void code_gen_ir(AST_node* program_node)
     if (LLVMVerifyModule(module, LLVMAbortProcessAction, &error))
     {
         fprintf(stderr, "Error : %s\n", error); 
-        exit(3); 
+       exit(3); 
     }
     LLVMDisposeMessage(error); 
     //print the final ir to a file  

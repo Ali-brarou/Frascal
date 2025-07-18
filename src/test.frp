@@ -1,49 +1,27 @@
-fonction test_nested_if(x: entier, y: entier): entier
+fonction fact_rec(n: entier): entier
 TDOL
 debut
-    si x > 0 alors
-        si y > 0 alors
-            retourner 1
-        sinon 
-            retourner 2
-        finsi
+    si n = 0 alors
+        retourner 1
     sinon 
-        si y < 0 alors
-            retourner 3
-        sinon 
-            retourner 4
-        finsi
+        retourner n * fact_rec(n - 1)
     finsi
-    retourner 0  // fallback (should never be reached)
+    retourner 0 
 fin
 
 TDOG
     x: entier
-    b: entier
 debut
-    // Test case 1: x > 0, y > 0 → should return 1
     x := 5
-    b := 10
-    ecrire(test_nested_if(x, b))
+    ecrire(fact_rec(x))     // expected output: 120
 
-    // Test case 2: x > 0, y ≤ 0 → should return 2
-    x := 3
-    b := 0
-    ecrire(test_nested_if(x, b))
-
-    // Test case 3: x ≤ 0, y < 0 → should return 3
-    x := -1
-    b := -5
-    ecrire(test_nested_if(x, b))
-
-    // Test case 4: x ≤ 0, y ≥ 0 → should return 4
     x := 0
-    b := 2
-    ecrire(test_nested_if(x, b))
+    ecrire(fact_rec(x))     // expected output: 1
 
-    
-    x := 999
-    b := 999
-    ecrire(test_nested_if(x, b))
+    x := 1
+    ecrire(fact_rec(x))     // expected output: 1
+
+    x := 7
+    ecrire(fact_rec(x))     // expected output: 5040
 fin
 
