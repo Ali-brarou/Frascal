@@ -1,27 +1,8 @@
-fonction fact_rec(n: entier): entier
-TDOL
-debut
-    si n = 0 alors
-        retourner 1
-    sinon 
-        retourner n * fact_rec(n - 1)
-    finsi
-    retourner 0 
-fin
-
 TDOG
-    x: entier
+    i: entier
 debut
-    x := 5
-    ecrire(fact_rec(x))     // expected output: 120
-
-    x := 0
-    ecrire(fact_rec(x))     // expected output: 1
-
-    x := 1
-    ecrire(fact_rec(x))     // expected output: 1
-
-    x := 7
-    ecrire(fact_rec(x))     // expected output: 5040
+    pour i de 0 a 5 faire
+        ecrire(2+3)        
+    fin pour
 fin
 

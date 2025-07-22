@@ -765,6 +765,8 @@ static void code_gen_stmt(AST_node* root)
 
 static void code_gen_subprograms(AST_node* subprograms)
 {
+    if (!subprograms)
+        return; 
     AST_subprograms_node* node = (AST_subprograms_node*)subprograms; 
     LL_FOR_EACH(node->functions_list, ll_node)
     {
@@ -879,7 +881,7 @@ void code_gen_ir(AST_node* program_node)
     if (LLVMVerifyModule(module, LLVMAbortProcessAction, &error))
     {
         fprintf(stderr, "Error : %s\n", error); 
-       exit(3); 
+        exit(3); 
     }
     LLVMDisposeMessage(error); 
     //print the final ir to a file  
