@@ -86,15 +86,14 @@ typedef enum Op_e {
 
 } Op_type; 
 
-/* an ugly solution for ownership of the primitive types */ 
-extern Type* TYPE_PRIMITIVES[VAL_TYPE_LAST + 1]; 
-#define TYPE_INT   TYPE_PRIMITIVES[VAL_INT]
-#define TYPE_FLOAT TYPE_PRIMITIVES[VAL_FLOAT]
-#define TYPE_BOOL  TYPE_PRIMITIVES[VAL_BOOL]
-#define TYPE_CHAR  TYPE_PRIMITIVES[VAL_CHAR]
-#define TYPE_ERR   TYPE_PRIMITIVES[VAL_ERR]
+/* an ugly solution for ownership of the primitive types (singeltons) */ 
+extern Primitive_type type_primitives[VAL_TYPE_LAST + 1]; 
+#define TYPE_INT    ((Type*)&type_primitives[VAL_INT])
+#define TYPE_FLOAT  ((Type*)&type_primitives[VAL_FLOAT])
+#define TYPE_BOOL   ((Type*)&type_primitives[VAL_BOOL])
+#define TYPE_CHAR   ((Type*)&type_primitives[VAL_CHAR])
+#define TYPE_ERR    ((Type*)&type_primitives[VAL_ERR])
 
-void type_init(void);
 bool type_is_singelton(Type* type); 
 bool type_equal(Type* type_a, Type* type_b); 
 

@@ -1,5 +1,5 @@
 CC 		:= gcc
-CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` #-fsanitize=address
+CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` -fsanitize=address 
 LDFLAGS	:= `llvm-config --libs core` 
 
 SRC := main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c builtins.c 
@@ -21,12 +21,13 @@ $(TARGET): $(SRC)
 	@echo "Finished compiling $(TARGET)"
 
 
+# disable address sanitize flag to use this
 .PHONY: memcheck
 memcheck: 
 	valgrind --leak-check=full --show-leak-kinds=all ./$(TARGET) test.frp
 
 .PHONY: test 
-test: 
+test: $(TARGET) 
 	./$(TARGET) test.frp 
 	llc -relocation-model=pic out.ll -o out.s
 	gcc out.s -fPIE -pie -o test

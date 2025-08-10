@@ -46,7 +46,6 @@ void code_gen_init()
     builtins_init(module); 
     builtins_add_to_symtab(global_sym_tab); 
 
-    //declare external functions like printf 
 
     /* printf 
      * return type : int
@@ -660,6 +659,12 @@ static void code_gen_print_stmt(AST_node* root)
             LLVMValueRef is_true = LLVMBuildICmp(builder, LLVMIntNE, args_val[i],
                                     LLVMConstInt(LLVMInt1Type(), 0, 0), "bool_cmp");
             printf_args[i + 1] = LLVMBuildSelect(builder, is_true, true_str, false_str, "bool_str");
+        }
+        else if (type_equal(args_type[i], TYPE_FLOAT))
+        {
+            /* cast float to double so printf can print it */ 
+            LLVMValueRef double_cast = LLVMBuildFPExt(builder, args_val[i], LLVMDoubleType(), "double_cast_tmp"); 
+            printf_args[i + 1] = double_cast; 
         }
         else 
         {

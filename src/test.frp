@@ -2,7 +2,9 @@ TDOG
     i: entier
 debut
     pour i de 0 a 5 faire
-        ecrire(2+3)        
+        ecrire(chr(90), 3)
+        ecrire(2.3934234234)
+        ecrire(ent(-2.3934234234))
     fin pour
 fin
 

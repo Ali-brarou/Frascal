@@ -1,19 +1,48 @@
 #include "builtins.h"
 
-#define MAX_BUILTINS 32
+#define BUILTINS_NB 3
 
-Builtin_fn builtins[MAX_BUILTINS];
+Builtin_fn builtins[BUILTINS_NB];
 size_t builtins_count = 0;
 
-static void register_builtin(Builtin_fn fn); 
-static Builtin_fn define_function(LLVMModuleRef module, const char* name, Type* ret_type, Type** params_type, size_t type_count); 
-static Builtin_fn create_builtin_ord(LLVMModuleRef module); 
 static void implement_ord(LLVMValueRef fn); 
+static void implement_chr(LLVMValueRef fn) ; 
+static void implement_ent(LLVMValueRef fn) ; 
+static void builtin_register(Builtin_fn fn); 
+static Builtin_fn builtin_build(LLVMModuleRef module, Builtin_prototype* prototype); 
+
+Builtin_prototype prototypes[BUILTINS_NB] = {
+    {
+        "ord", 
+        TYPE_INT, 
+        (Type*[]){TYPE_CHAR}, 
+        1,
+        implement_ord, 
+    }, 
+    {
+        "chr", 
+        TYPE_CHAR, 
+        (Type*[]){TYPE_INT}, 
+        1,
+        implement_chr, 
+    }, 
+    {
+        "ent", 
+        TYPE_INT, 
+        (Type*[]){TYPE_FLOAT}, 
+        1,
+        implement_ent, 
+    }, 
+}; 
 
 void builtins_init(LLVMModuleRef module)
 {    
-    Builtin_fn ord_builtin = create_builtin_ord(module); 
-    register_builtin(ord_builtin); 
+    for (int i = 0; i < BUILTINS_NB; i++)
+    {
+
+        Builtin_fn builtin = builtin_build(module, &prototypes[i]); 
+        builtin_register(builtin); 
+    }
 }
 
 void builtins_add_to_symtab(Symbol_table* sym_tab)
@@ -25,44 +54,59 @@ void builtins_add_to_symtab(Symbol_table* sym_tab)
     }
 }
 
-static void register_builtin(Builtin_fn fn)
+static void builtin_register(Builtin_fn fn)
 {
-    if (builtins_count < MAX_BUILTINS)
-        builtins[builtins_count++] = fn; 
+    assert(builtins_count < BUILTINS_NB);
+    builtins[builtins_count++] = fn; 
 }
 
-static Builtin_fn define_function(LLVMModuleRef module, const char* name, Type* ret_type, Type** params_type, size_t params_count)
+static Builtin_fn builtin_build(LLVMModuleRef module, Builtin_prototype* prot)
 {
-    LLVMTypeRef llvm_ret_type = type_to_llvm_type(ret_type); 
+    LLVMTypeRef llvm_ret_type = type_to_llvm_type(prot->ret_type); 
     LLVMTypeRef* llvm_params_type = NULL; 
-    if (params_count > 0)
-        llvm_params_type = malloc(params_count * sizeof(LLVMTypeRef)); 
-    for (size_t i = 0; i < params_count; i++)
+    if (prot->params_count > 0)
+        llvm_params_type = malloc(prot->params_count * sizeof(LLVMTypeRef)); 
+    for (size_t i = 0; i < prot->params_count; i++)
     {
-        llvm_params_type[i] = type_to_llvm_type(params_type[i]); 
+        llvm_params_type[i] = type_to_llvm_type(prot->params_type[i]); 
     }
 
-    LLVMTypeRef llvm_fun_type = LLVMFunctionType(llvm_ret_type, llvm_params_type, params_count, 0); 
-    LLVMValueRef llvm_fun_ref = LLVMAddFunction(module, name, llvm_fun_type); 
+    LLVMTypeRef llvm_fun_type = LLVMFunctionType(llvm_ret_type, llvm_params_type, prot->params_count, 0); 
+    LLVMValueRef llvm_fun_ref = LLVMAddFunction(module, prot->name, llvm_fun_type); 
 
-    Type* fun_type = type_function_create(ret_type, params_type, params_count); 
+    Type* fun_type = type_function_create(prot->ret_type, prot->params_type, prot->params_count); 
     //clean up 
     free(llvm_params_type); 
 
+    /* implement */ 
+    prot->implement(llvm_fun_ref); 
+
     return (Builtin_fn){
-        name, 
+        prot->name, 
         fun_type, 
         llvm_fun_ref, 
         llvm_fun_type, 
     }; 
 }
 
-/* each function will have it's own builder to avoid interference with main code */ 
-static void implement_ord(LLVMValueRef fn) {
+static inline LLVMBuilderRef create_fn_builder(LLVMValueRef fn)
+{
     LLVMBuilderRef builder = LLVMCreateBuilder();
 
     LLVMBasicBlockRef entry = LLVMAppendBasicBlock(fn, "entry");
     LLVMPositionBuilderAtEnd(builder, entry);
+    return builder; 
+}
+
+/* each function will have it's own builder to avoid interference with main code */ 
+
+/* ord function (returns ascii integer from char)
+ * args (char)
+ * return int
+ */
+static void implement_ord(LLVMValueRef fn) 
+{
+    LLVMBuilderRef builder = create_fn_builder(fn);
 
     LLVMValueRef arg = LLVMGetParam(fn, 0);
     LLVMValueRef result = LLVMBuildZExt(builder, arg, LLVMInt32Type(), "ord_result");
@@ -71,18 +115,32 @@ static void implement_ord(LLVMValueRef fn) {
     LLVMDisposeBuilder(builder);
 }
 
-/* ord function (returns ascii number of char as an integer)
- * args (char)
- * return int
+/* chr function (returns character from ascii integer) 
+ * args (int)
+ * return char
  */
-static Builtin_fn create_builtin_ord(LLVMModuleRef module)
+static void implement_chr(LLVMValueRef fn) 
 {
-    Type* ret_type = TYPE_INT; 
-    Type* params_type[] = {TYPE_CHAR}; 
-    size_t params_count = 1; 
-     
-    Builtin_fn builtin = define_function(module, "ord", ret_type, params_type, params_count); 
-    implement_ord(builtin.fun_ref); 
+    LLVMBuilderRef builder = create_fn_builder(fn);
 
-    return builtin; 
+    LLVMValueRef arg = LLVMGetParam(fn, 0);
+    LLVMValueRef result = LLVMBuildTrunc(builder, arg, LLVMInt8Type(), "chr_result"); 
+    LLVMBuildRet(builder, result); 
+
+    LLVMDisposeBuilder(builder);
+}
+
+/* ent function (float to int)
+ * args (float)
+ * return int 
+ */
+static void implement_ent(LLVMValueRef fn) 
+{
+    LLVMBuilderRef builder = create_fn_builder(fn);
+
+    LLVMValueRef arg = LLVMGetParam(fn, 0);
+    LLVMValueRef result = LLVMBuildFPToSI(builder, arg, LLVMInt32Type(), "ent_result"); 
+    LLVMBuildRet(builder, result); 
+
+    LLVMDisposeBuilder(builder);
 }

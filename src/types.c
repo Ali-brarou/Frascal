@@ -1,23 +1,18 @@
 #include "types.h"
 
-Type* TYPE_PRIMITIVES[VAL_TYPE_LAST + 1]; /*exposed one :3*/ 
-static Primitive_type primitive_types[VAL_CHAR + 1]; 
-
-void type_init(void)
-{
-    for (int val_type = 0; val_type <= VAL_TYPE_LAST; val_type++)
-    {
-        primitive_types[val_type].kind = TYPE_PRIMITIVE; 
-        primitive_types[val_type].val_type = (Value_type)val_type; 
-        TYPE_PRIMITIVES[val_type] = (Type*)&primitive_types[val_type]; 
-    }
-}
+Primitive_type type_primitives[VAL_CHAR + 1] = {
+    {TYPE_PRIMITIVE, VAL_ERR}, 
+    {TYPE_PRIMITIVE, VAL_INT}, 
+    {TYPE_PRIMITIVE, VAL_FLOAT}, 
+    {TYPE_PRIMITIVE, VAL_BOOL}, 
+    {TYPE_PRIMITIVE, VAL_CHAR}, 
+}; 
 
 bool type_is_singelton(Type* type)
 {
     for (int val_type = 0; val_type <= VAL_TYPE_LAST; val_type++)
     {
-        if (type == TYPE_PRIMITIVES[val_type])
+        if (type == (Type*)&type_primitives[val_type])
             return true; 
     }
     return false; 
@@ -49,7 +44,7 @@ bool type_equal(Type* type_a, Type* type_b)
 Type* type_primitive_create(Value_type vtype)
 {
     if (vtype >= VAL_ERR && vtype <= VAL_CHAR)
-        return TYPE_PRIMITIVES[vtype];
+        return (Type*)&type_primitives[vtype];
     return TYPE_ERR;
 }
 
