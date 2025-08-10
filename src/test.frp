@@ -1,8 +1,12 @@
+fonction f(x: entier, dummy: entier): entier
+debut
+    retourner x * x
+fin 
 TDOG
     i: entier
+    j: entier
 debut
     pour i de 0 a 5 faire
-        ecrire(2+3)        
+        ecrire(f(i, j))        
     fin pour
 fin
-

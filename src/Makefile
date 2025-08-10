@@ -1,8 +1,8 @@
 CC 		:= gcc
-CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` #-fsanitize=address
+CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` -fsanitize=address
 LDFLAGS	:= `llvm-config --libs core` 
 
-SRC := main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c builtins.c 
+SRC := main.c lexer.c parser.c ast.c linkedlist.c types.c # codegen.c symboltable.c builtins.c 
 
 TARGET := frascal
 
@@ -21,6 +21,7 @@ $(TARGET): $(SRC)
 	@echo "Finished compiling $(TARGET)"
 
 
+#disable gcc sanitize flag to use this 
 .PHONY: memcheck
 memcheck: 
 	valgrind --leak-check=full --show-leak-kinds=all ./$(TARGET) test.frp
@@ -28,9 +29,9 @@ memcheck:
 .PHONY: test 
 test: 
 	./$(TARGET) test.frp 
-	llc -relocation-model=pic out.ll -o out.s
-	gcc out.s -fPIE -pie -o test
-	./test
+	#llc -relocation-model=pic out.ll -o out.s
+	#gcc out.s -fPIE -pie -o test
+	#./test
 
 .PHONY: clean
 clean : 

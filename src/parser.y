@@ -16,7 +16,7 @@ extern int yylex();
 void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);} 
 
 #define YYMAXDEPTH 10000 /*bigger stack size*/ 
-//int yydebug = 1; /*enable debugging*/ 
+int yydebug = 1; /*enable debugging*/ 
 %}
 
 %code requires { /* add functions declarations in parser.h */  
@@ -71,7 +71,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 %define parse.error verbose
 
 %%
-    program : optional_TDNT optional_subprogram_defs optional_TDOG T_BEGIN optional_statements T_END {program_node = ast_program_create($2, $3, $5);}
+    program : optional_TDNT optional_subprogram_defs optional_TDOG T_BEGIN optional_statements T_END {program_node = AST_CREATE(NODE_PROGRAM, $2, $3, $5);}
 
     optional_TDNT: TDNT {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
@@ -91,7 +91,7 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
     subprogram_def: function_def {$$ = $1;}
 
-    function_def: T_FUNC id_ref T_LPAREN optional_params T_RPAREN T_COLON type_ref optional_TDOL T_BEGIN optional_statements T_END {$$ = ast_function_create($2,$4,$8,$10,$7);}
+    function_def: T_FUNC id_ref T_LPAREN optional_params T_RPAREN T_COLON type_ref optional_TDOL T_BEGIN optional_statements T_END {$$ = AST_CREATE(NODE_FUNCTION,$2,$4,$8,$10,$7);}
 
     optional_params: params {$$ = $1;}
         | /*empty*/ {$$ = NULL;}
@@ -122,21 +122,19 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     fun_declaration: id_ref T_COLON T_PROC {$$ = ast_fun_decl_node_create($1);}
                 | id_ref T_COLON T_FUNC {$$ = ast_fun_decl_node_create($1);}
 
-    var_declaration: id_ref T_COLON type_ref {$$ = ast_var_decl_node_create($3, $1);}
+    var_declaration: id_ref T_COLON type_ref {$$ = AST_CREATE(NODE_VAR_DECL, $3, $1);}
 
-    id_ref: T_IDENTIFIER {$$ = ast_id_node_create($1);}
+    id_ref: T_IDENTIFIER {$$ = AST_CREATE(NODE_ID, $1);}
 
     type_ref: T_TYPEINT { $$ = TYPE_INT; }
         | T_TYPEFLOAT   { $$ = TYPE_FLOAT; }
         | T_TYPEBOOL    { $$ = TYPE_BOOL; }
         | T_TYPECHAR    { $$ = TYPE_CHAR; } 
 
-    const_value: T_INTEGER  {$$ = ast_const_node_create(VAL_INT, $1);}
-                | T_FLOAT   {$$ = ast_const_node_create(VAL_FLOAT, $1);}
-                | T_BOOL    {$$ = ast_const_node_create(VAL_BOOL, $1);}
-                | T_CHAR    {$$ = ast_const_node_create(VAL_CHAR, $1);}
-
-
+    const_value: T_INTEGER  {$$ = AST_CREATE(NODE_CONST, VAL_INT, $1);}
+                | T_FLOAT   {$$ = AST_CREATE(NODE_CONST, VAL_FLOAT, $1);}
+                | T_BOOL    {$$ = AST_CREATE(NODE_CONST, VAL_BOOL, $1);}
+                | T_CHAR    {$$ = AST_CREATE(NODE_CONST, VAL_CHAR, $1);}
 
     optional_statements : statements {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
@@ -152,9 +150,9 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
                 | return_stmt {$$ = $1;}
                 | print_stmt {$$ = $1;}
 
-    assignment: id_ref T_ASSIGN expression {$$ = ast_assign_node_create($1, $3);}
+    assignment: id_ref T_ASSIGN expression {$$ = AST_CREATE(NODE_ASSIGN, $1, $3);}
 
-    if_stmt: T_IF expression T_THEN optional_statements optional_elif_branches optional_else_branch T_ENDIF {$$ = ast_if_node_create($2, $4, $5, $6);}
+    if_stmt: T_IF expression T_THEN optional_statements optional_elif_branches optional_else_branch T_ENDIF {$$ = AST_CREATE(NODE_IF, $2, $4, $5, $6);}
 
     optional_elif_branches: elif_branches {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
@@ -169,45 +167,45 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     optional_else_branch: T_ELSE optional_statements {$$ = $2;}
                 | /*empty*/ {$$ = NULL;}
 
-    for_loop_stmt: T_FOR id_ref T_DE expression T_TO expression T_DO optional_statements T_ENDFOR {$$ = ast_for_node_create($2, $4, $6, $8);}
+    for_loop_stmt: T_FOR id_ref T_DE expression T_TO expression T_DO optional_statements T_ENDFOR {$$ = AST_CREATE(NODE_FOR, $2, $4, $6, $8);}
 
-    while_loop_stmt: T_WHILE expression T_DO optional_statements T_ENDWHILE {$$ = ast_while_node_create($2, $4);}
+    while_loop_stmt: T_WHILE expression T_DO optional_statements T_ENDWHILE {$$ = AST_CREATE(NODE_WHILE, $2, $4);}
 
-    dowhile_loop_stmt: T_REPEAT optional_statements T_UNTILL expression {$$ = ast_dowhile_node_create($4, $2);}
+    dowhile_loop_stmt: T_REPEAT optional_statements T_UNTILL expression {$$ = AST_CREATE(NODE_DOWHILE, $4, $2);}
 
-    print_stmt: T_PRINT T_LPAREN optional_args T_RPAREN {$$ = ast_print_node_create($3);}
+    print_stmt: T_PRINT T_LPAREN optional_args T_RPAREN {$$ = AST_CREATE(NODE_PRINT, $3);}
 
-    return_stmt: T_RETURN expression {$$ = ast_return_node_create($2);}
+    return_stmt: T_RETURN expression {$$ = AST_CREATE(NODE_RETURN, $2);}
 
     optional_args: args {$$ = $1;}
         | /*empty*/ {$$ = NULL;}
 
-    args: args T_COMMA arg {ast_args_insert($1, $3);}
-        | arg {$$ = ast_args_create($1);} 
+    args: arg T_COMMA args {$1 ->next = $3; $$ = $1;}
+        | arg {$$ = $1;}
     
-    arg: expression {$$ = ast_arg_create($1);}
+    arg: expression {$$ = AST_CREATE(NODE_ARG, $1);}
 
-    call_fn: id_ref T_LPAREN optional_args T_RPAREN {$$ = ast_call_node_create($1, $3);}
+    call_fn: id_ref T_LPAREN optional_args T_RPAREN {$$ = AST_CREATE(NODE_CALL, $1, $3);}
 
     expression: call_fn %prec PREC_CALL {$$ = $1;} 
                 | id_ref{$$ = $1;}
                 | const_value {$$ = $1;}
-                | expression T_PLUS expression {$$ = ast_op_node_create(OP_ADD, $1, $3);}
-                | expression T_MINUS expression {$$ = ast_op_node_create(OP_SUB, $1, $3);}
-                | expression T_MULT expression {$$ = ast_op_node_create(OP_MUL, $1, $3);}
-                | expression T_DIV expression {$$ = ast_op_node_create(OP_DIV, $1, $3);}
-                | expression T_IDIV expression {$$ = ast_op_node_create(OP_IDIV, $1, $3);}
-                | expression T_MOD expression {$$ = ast_op_node_create(OP_MOD, $1, $3);}
-                | expression T_GT expression {$$ = ast_op_node_create(OP_GREATER, $1, $3);}
-                | expression T_LT expression {$$ = ast_op_node_create(OP_LESS, $1, $3);}
-                | expression T_GE expression {$$ = ast_op_node_create(OP_GREATER_EQUAL, $1, $3);}
-                | expression T_LE expression {$$ = ast_op_node_create(OP_LESS_EQUAL, $1, $3);}
-                | expression T_EQ expression {$$ = ast_op_node_create(OP_EQUAL, $1, $3);}
-                | expression T_NEQ expression {$$ = ast_op_node_create(OP_NOT_EQUAL, $1, $3);}
-                | expression T_OR expression {$$ = ast_op_node_create(OP_OR, $1, $3);}
-                | expression T_AND expression {$$ = ast_op_node_create(OP_AND, $1, $3);}
-                | T_NOT expression {$$ = ast_op_node_create(OP_NOT, $2, NULL);}
-                | T_MINUS expression %prec UMINUS {$$ = ast_op_node_create(OP_UMIN, $2, NULL);} 
+                | expression T_PLUS expression {$$ = AST_CREATE(NODE_OP, OP_ADD, $1, $3);}
+                | expression T_MINUS expression {$$ = AST_CREATE(NODE_OP, OP_SUB, $1, $3);}
+                | expression T_MULT expression {$$ = AST_CREATE(NODE_OP, OP_MUL, $1, $3);}
+                | expression T_DIV expression {$$ = AST_CREATE(NODE_OP, OP_DIV, $1, $3);}
+                | expression T_IDIV expression {$$ = AST_CREATE(NODE_OP, OP_IDIV, $1, $3);}
+                | expression T_MOD expression {$$ = AST_CREATE(NODE_OP, OP_MOD, $1, $3);}
+                | expression T_GT expression {$$ = AST_CREATE(NODE_OP, OP_GREATER, $1, $3);}
+                | expression T_LT expression {$$ = AST_CREATE(NODE_OP, OP_LESS, $1, $3);}
+                | expression T_GE expression {$$ = AST_CREATE(NODE_OP, OP_GREATER_EQUAL, $1, $3);}
+                | expression T_LE expression {$$ = AST_CREATE(NODE_OP, OP_LESS_EQUAL, $1, $3);}
+                | expression T_EQ expression {$$ = AST_CREATE(NODE_OP, OP_EQUAL, $1, $3);}
+                | expression T_NEQ expression {$$ = AST_CREATE(NODE_OP, OP_NOT_EQUAL, $1, $3);}
+                | expression T_OR expression {$$ = AST_CREATE(NODE_OP, OP_OR, $1, $3);}
+                | expression T_AND expression {$$ = AST_CREATE(NODE_OP, OP_AND, $1, $3);}
+                | T_NOT expression {$$ = AST_CREATE(NODE_OP, OP_NOT, $2, NULL);}
+                | T_MINUS expression %prec UMINUS {$$ = AST_CREATE(NODE_OP, OP_UMIN, $2, NULL);} 
                 | T_LPAREN expression T_RPAREN {$$ = $2;}
 
 
