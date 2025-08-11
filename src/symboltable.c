@@ -6,7 +6,7 @@ static void st_free_entry(void* entry);
 
 static unsigned int st_hash(const char* key)
 {
-    //djb2 hash
+    /* djb2 hash */ 
     unsigned long hash = 5381;
     int c;
 
@@ -48,7 +48,7 @@ static St_entry* st_create_var_entry(const char* name, Type* type, LLVMValueRef 
     entry -> type = type; 
     entry -> value_ref = id_alloca; 
 
-    return (St_entry*)entry; 
+    return entry; 
 }
 
 static St_entry* st_create_fun_entry(const char* name, Type* fun_type, LLVMValueRef fun_ref, LLVMTypeRef llvm_fun_type)
@@ -61,7 +61,16 @@ static St_entry* st_create_fun_entry(const char* name, Type* fun_type, LLVMValue
     entry -> value_ref = fun_ref; 
     entry -> type_ref = llvm_fun_type; 
 
-    return (St_entry*)entry; 
+    return entry; 
+}
+
+static St_entry* st_create_type_entry(const char* name, Type* type)
+{
+    St_entry* entry = malloc(sizeof(St_entry));
+    entry -> kind = ENTRY_TYPE; 
+    entry -> name = strdup(name); 
+    entry -> type = type; 
+    return entry; 
 }
 
 static void st_free_entry(void* entry)
@@ -69,9 +78,9 @@ static void st_free_entry(void* entry)
     if (!entry)
         return; 
 
-    if (((St_entry*)entry) -> name != NULL)
-        free(((St_entry*)entry) -> name); 
-    type_free(((St_entry*)entry)->type); 
+    free(((St_entry*)entry) -> name); 
+    if (((St_entry*)entry) -> kind != ENTRY_VAR)
+        type_free(((St_entry*)entry)->type); 
     
     free(entry); 
 }
@@ -95,6 +104,18 @@ int st_insert_fun(Symbol_table* table, const char* name, Type* fun_type, LLVMVal
         return ST_ALREADY_DECLARED; 
 
     St_entry* entry = st_create_fun_entry(name, fun_type, fun_ref, llvm_fun_type); 
+    unsigned index = st_hash(name); 
+    LL_insert_back(table->buckets[index], entry); 
+    
+    return ST_INSERT_SUCCESS; 
+}
+
+int st_insert_type(Symbol_table* table, const char* name, Type* type)
+{
+    if (st_find_type(table, name) != NULL)
+        return ST_ALREADY_DECLARED; 
+    
+    St_entry* entry = st_create_type_entry(name, type); 
     unsigned index = st_hash(name); 
     LL_insert_back(table->buckets[index], entry); 
     
@@ -148,4 +169,20 @@ St_entry* st_find_fun(Symbol_table* table, const char* name, Type** args, size_t
 
     return NULL; 
     
+}
+
+St_entry* st_find_type(Symbol_table* table, const char* name)
+{
+    unsigned index = st_hash(name); 
+
+    LL_FOR_EACH(table->buckets[index], node)
+    {
+        if (!strcmp(((St_entry*)node -> data) -> name, name) 
+                && ((St_entry*)node->data)->kind==ENTRY_TYPE)
+        {
+            return (St_entry*) node -> data; 
+        }
+    }
+
+    return NULL; 
 }

@@ -10,12 +10,10 @@
 
 #define TABLE_SIZE 333
 
-typedef Linkedlist Entries_llist;
-
 typedef enum Entry_kind_e {
     ENTRY_FUN, 
     ENTRY_VAR, 
-    ENTRY_TYPE, /* user defined types */ 
+    ENTRY_TYPE,
 } Entry_kind; 
 
 
@@ -29,7 +27,7 @@ typedef struct St_entry_s {
 } St_entry; 
 
 typedef struct Symbol_table_s {
-    Entries_llist* buckets[TABLE_SIZE]; 
+    Linkedlist* buckets[TABLE_SIZE]; 
 } Symbol_table; 
 
 
@@ -43,9 +41,11 @@ void st_free(Symbol_table* table);
 /* otherwise already declared if it's already declared duh */
 int st_insert_var(Symbol_table* table, const char* name, Type* type, LLVMValueRef id_alloca); 
 int st_insert_fun(Symbol_table* table, const char* name, Type* type, LLVMValueRef function, LLVMTypeRef fun_type); 
+int st_insert_type(Symbol_table* table, const char* name, Type* type); 
 
 St_entry* st_find_var(Symbol_table* table, const char* name); 
 /* function overloading so you need to pass also args type */ 
 St_entry* st_find_fun(Symbol_table* table, const char* name, Type** args, size_t args_count); 
+St_entry* st_find_type(Symbol_table* table, const char* name); 
 
 #endif

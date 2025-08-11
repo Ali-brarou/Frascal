@@ -1,10 +1,24 @@
+TDNT 
+    table = tableau de 10 entier
+fonction who(x: entier): entier
+debut
+    retourner x * x
+fin 
 TDOG
     i: entier
+    who: entier
+    test: table 
 debut
+    who := who(-2*2)
+    ecrire(who)
+    pour i de 0 a 10 faire
+        test[i] := who(i)
+        ecrire(test[i])
+    fin pour 
+    ecrire(test[test[2]])
     pour i de 0 a 5 faire
         ecrire(chr(90), 3)
         ecrire(2.3934234234)
         ecrire(ent(-2.3934234234))
     fin pour
 fin
-

@@ -19,6 +19,7 @@ typedef enum Node_type_e {
     NODE_ARGS, 
     NODE_ARG, 
     //new types 
+    NODE_TYPE, 
     NODE_NEW_TYPE_DECLS,
     NODE_ARRAY_TYPE_DECL,  
     //declarations
@@ -41,10 +42,14 @@ typedef enum Node_type_e {
     NODE_CONST,  
     NODE_ID, 
     NODE_CALL, 
+    NODE_ARR_SUB, 
 
 } Node_type; 
 
-
+typedef enum AST_type_kind_e {
+    TYPE_NODE_PRIMITIVE, 
+    TYPE_NODE_USER_DEFINED, 
+} AST_type_kind; 
 
 
 typedef struct AST_node_s { /*basic node*/
@@ -54,6 +59,7 @@ typedef struct AST_node_s { /*basic node*/
 typedef struct AST_program_node_s { /*main program node*/
     Node_type type; 
 
+    AST_node* new_types; 
     AST_node* subprograms; 
     AST_node* declarations; 
     AST_node* statements; 
@@ -70,7 +76,7 @@ typedef struct AST_function_node_s {
     Node_type type; 
 
     AST_node* id_node; 
-    Type* ret_type; 
+    AST_node* ret_type; 
     AST_node* params; 
     AST_node* declarations; 
     AST_node* statements; 
@@ -86,7 +92,7 @@ typedef struct AST_param_node_s {
     Node_type type; 
 
     AST_node* id_node; 
-    Type* id_type; 
+    AST_node* id_type; 
 } AST_param_node; 
 
 typedef struct AST_args_node_s {
@@ -101,6 +107,13 @@ typedef struct AST_arg_node_s {
     AST_node* exp; 
 } AST_arg_node; 
 
+typedef struct AST_type_node_s {
+    Node_type type; 
+    AST_type_kind type_kind; 
+    char* id;
+    Type* id_type; 
+} AST_type_node;
+
 typedef struct AST_ntype_decls_node_s {
     Node_type type; 
 
@@ -109,7 +122,8 @@ typedef struct AST_ntype_decls_node_s {
 
 typedef struct AST_array_type_decl_node_s {
     Node_type type; 
-
+    
+    AST_node* id_node; 
     Type* element_type; 
     size_t size; 
 } AST_array_type_decl_node; 
@@ -124,7 +138,7 @@ typedef struct AST_declarations_node_s {
 typedef struct AST_var_declaration_node_s {
     Node_type type; 
 
-    Type* id_type;  
+    AST_node* id_type;  
     AST_node* id_node; 
 } AST_var_declaration_node; 
 
@@ -238,24 +252,35 @@ typedef struct AST_call_node_s {
     AST_node* args; 
 } AST_call_node; 
 
-AST_node *ast_program_create(AST_node* subprograms, AST_node* decls, AST_node* stmts); 
+typedef struct AST_arr_sub_node_s {
+    Node_type type; 
+
+    AST_node* exp;  
+    AST_node* id_node; 
+    Type* elem_type; /* during type resolution */ 
+
+} AST_arr_sub_node; 
+
+AST_node *ast_program_create(AST_node* new_types, AST_node* subprograms, AST_node* decls, AST_node* stmts); 
 AST_node *ast_subprograms_create(AST_node* subprogram); 
 void ast_subprograms_insert(AST_node* subprograms, AST_node* subprogram); 
-AST_node *ast_function_create(AST_node* id_node, AST_node* params, AST_node* decls, AST_node* stmts, Type* ret_type); 
+AST_node *ast_function_create(AST_node* id_node, AST_node* params, AST_node* decls, AST_node* stmts, AST_node* ret_type); 
 AST_node *ast_params_create(AST_node* param); 
 void ast_params_insert(AST_node* params, AST_node* param); 
-AST_node *ast_param_create(Type* id_type, AST_node* id_node); 
+AST_node *ast_param_create(AST_node* id_type, AST_node* id_node); 
 AST_node *ast_args_create(AST_node* arg); 
 void ast_args_insert(AST_node* args, AST_node* arg); 
 AST_node *ast_arg_create(AST_node* exp); 
 
 //new types 
+AST_node *ast_type_create_from_type(Type* type); 
+AST_node *ast_type_create_from_name(char* name); 
 AST_node *ast_ntype_decls_node_create(AST_node* ntype_decl_node); 
 void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_decl_node); 
-AST_node *ast_ntype_array_node_create(AST_node* ntype_decl_node); 
+AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, Type* elem_type);
 
 //declarations
-AST_node *ast_var_decl_node_create(Type* id_type, AST_node* id_node); 
+AST_node *ast_var_decl_node_create(AST_node* id_type, AST_node* id_node); 
 AST_node *ast_fun_decl_node_create(AST_node* id_node); 
 AST_node *ast_decls_node_create(AST_node* decl); 
 void ast_decls_node_insert(AST_node* decls, AST_node* decl); 
@@ -283,6 +308,7 @@ AST_node *ast_op_node_create(Op_type otype, AST_node* lhs, AST_node* rhs);
 AST_node *ast_const_node_create(Value_type val_type, Const_value val);  
 AST_node *ast_id_node_create(char* id_str); 
 AST_node *ast_call_node_create(AST_node* id_node, AST_node* args); 
+AST_node *ast_arr_sub_create(AST_node* id_node, AST_node* exp); 
 
 void AST_tree_free(void* tree);
 

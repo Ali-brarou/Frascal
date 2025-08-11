@@ -6,11 +6,12 @@
     node_var_type* node = malloc(sizeof(node_var_type));\
     node -> type = node_type\
 
-AST_node *ast_program_create(AST_node* subprograms, AST_node* decls, AST_node* stmts)
+AST_node *ast_program_create(AST_node* new_types, AST_node* subprograms, AST_node* decls, AST_node* stmts)
 {
     NODE_CREATE(node, AST_program_node, NODE_PROGRAM); 
 
     /* will be null if not provided because they are optional */
+    node -> new_types = new_types; 
     node -> subprograms = subprograms; 
     node -> statements = stmts; 
     node -> declarations = decls; 
@@ -34,7 +35,7 @@ void ast_subprograms_insert(AST_node* subprogram_nodes, AST_node* subprogram_nod
         LL_insert_back(((AST_subprograms_node*)subprogram_nodes)->functions_list,subprogram_node); 
 }
 
-AST_node *ast_function_create(AST_node* id_node, AST_node* params, AST_node* decls, AST_node* stmts, Type* ret_type)
+AST_node *ast_function_create(AST_node* id_node, AST_node* params, AST_node* decls, AST_node* stmts, AST_node* ret_type)
 {
     NODE_CREATE(node, AST_function_node, NODE_FUNCTION); 
 
@@ -62,7 +63,7 @@ void ast_params_insert(AST_node* params, AST_node* param)
     LL_insert_back(((AST_params_node*)params)->params_list, param); 
 }
 
-AST_node *ast_param_create(Type* id_type, AST_node* id_node)
+AST_node *ast_param_create(AST_node* id_type, AST_node* id_node)
 {
     NODE_CREATE(node, AST_param_node, NODE_PARAM); 
 
@@ -96,6 +97,28 @@ AST_node *ast_arg_create(AST_node* exp)
     return (AST_node*) node; 
 }
 
+AST_node *ast_type_create_from_type(Type* type)
+{
+    NODE_CREATE(node, AST_type_node, NODE_TYPE); 
+
+    node->type_kind = TYPE_NODE_PRIMITIVE; 
+    node->id        = NULL; 
+    node->id_type   = type; 
+    
+    return (AST_node*)node; 
+}
+
+AST_node *ast_type_create_from_name(char* name)
+{
+    NODE_CREATE(node, AST_type_node, NODE_TYPE); 
+
+    node->type_kind = TYPE_NODE_USER_DEFINED; 
+    node->id        = name; 
+    node->id_type   = NULL; 
+    
+    return (AST_node*)node; 
+}
+
 AST_node *ast_ntype_decls_node_create(AST_node* decl_node) 
 {
     NODE_CREATE(node, AST_ntype_decls_node, NODE_NEW_TYPE_DECLS); 
@@ -109,6 +132,17 @@ AST_node *ast_ntype_decls_node_create(AST_node* decl_node)
 void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_decl_node)
 {
     LL_insert_back(((AST_ntype_decls_node*) ntype_decls_node) -> new_type_decls_list, ntype_decl_node); 
+}
+
+AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, Type* elem_type)
+{
+    NODE_CREATE(node, AST_array_type_decl_node, NODE_ARRAY_TYPE_DECL); 
+
+    node -> id_node = id_node; 
+    node -> element_type = elem_type; 
+    node -> size = arr_size; 
+
+    return (AST_node*)node; 
 }
 
 AST_node *ast_decls_node_create(AST_node* decl)
@@ -130,7 +164,7 @@ void ast_decls_node_insert(AST_node* decls, AST_node* decl)
         LL_insert_back(((AST_declarations_node*) decls) -> fun_decls_list, decl); 
 }
 
-AST_node *ast_var_decl_node_create(Type* id_type, AST_node* id_node)
+AST_node *ast_var_decl_node_create(AST_node* id_type, AST_node* id_node)
 {
     NODE_CREATE(node, AST_var_declaration_node, NODE_VAR_DECLARATION); 
 
@@ -256,7 +290,6 @@ AST_node *ast_print_node_create(AST_node* args)
     NODE_CREATE(node, AST_print_node, NODE_PRINT); 
 
     node->args = args; 
-    
     return (AST_node*) node; 
 }
 
@@ -288,6 +321,11 @@ Type* ast_exp_type(AST_node* exp_node)
             {
                 AST_call_node* node = (AST_call_node*) exp_node; 
                 return node->ret_type; 
+            }
+        case NODE_ARR_SUB: 
+            {
+                AST_arr_sub_node* node = (AST_arr_sub_node*) exp_node; 
+                return node->elem_type; 
             }
         default: 
             fprintf(stderr,"Error : ast node is not an expression\n"); 
@@ -339,6 +377,16 @@ AST_node *ast_call_node_create(AST_node* id_node, AST_node* args)
     return (AST_node*) node; 
 }
 
+AST_node *ast_arr_sub_create(AST_node* id_node, AST_node* exp)
+{
+    NODE_CREATE(node, AST_arr_sub_node, NODE_ARR_SUB); 
+
+    node -> id_node = id_node; 
+    node -> exp = exp; 
+
+    return (AST_node*) node; 
+}
+
 void AST_tree_free(void* tree)
 {
     AST_node* root_node = (AST_node*) tree; 
@@ -349,6 +397,7 @@ void AST_tree_free(void* tree)
         case NODE_PROGRAM: 
             {
                 AST_program_node* node = (AST_program_node*)root_node; 
+                AST_tree_free(node -> new_types); 
                 AST_tree_free(node -> subprograms); 
                 AST_tree_free(node -> statements); 
                 AST_tree_free(node -> declarations); 
@@ -367,6 +416,7 @@ void AST_tree_free(void* tree)
                 AST_tree_free(node->params); 
                 AST_tree_free(node->declarations); 
                 AST_tree_free(node->statements); 
+                AST_tree_free(node->ret_type); 
             }
             break; 
         case NODE_PARAMS: 
@@ -379,6 +429,7 @@ void AST_tree_free(void* tree)
             {
                 AST_param_node* node = (AST_param_node*)root_node; 
                 AST_tree_free(node->id_node); 
+                AST_tree_free(node->id_type); 
             }
             break; 
         case NODE_ARGS: 
@@ -393,6 +444,24 @@ void AST_tree_free(void* tree)
                 AST_tree_free(node->exp); 
             }
             break; 
+        case NODE_TYPE: 
+            {
+                AST_type_node* node = (AST_type_node*)root_node; 
+                free(node->id); 
+            }
+            break; 
+        case NODE_NEW_TYPE_DECLS: 
+            {
+                AST_ntype_decls_node* node = (AST_ntype_decls_node*)root_node; 
+                LL_free_list(&node->new_type_decls_list, AST_tree_free); 
+            }
+            break; 
+        case NODE_ARRAY_TYPE_DECL: 
+            {
+                AST_array_type_decl_node* node = (AST_array_type_decl_node*)root_node; 
+                AST_tree_free(node->id_node); 
+            }
+            break; 
         case NODE_DECLARATIONS: 
             {
                 AST_declarations_node* node = (AST_declarations_node*)root_node; 
@@ -404,6 +473,7 @@ void AST_tree_free(void* tree)
             {
                 AST_var_declaration_node* node = (AST_var_declaration_node*)root_node; 
                 AST_tree_free(node -> id_node);
+                AST_tree_free(node -> id_type); 
             }
             break; 
         case NODE_FUN_DECLARATION: 
@@ -505,6 +575,13 @@ void AST_tree_free(void* tree)
                 AST_call_node* node = (AST_call_node*)root_node; 
                 AST_tree_free(node->id_node); 
                 AST_tree_free(node->args); 
+            }
+            break; 
+        case NODE_ARR_SUB: 
+            {
+                AST_arr_sub_node* node = (AST_arr_sub_node*)root_node; 
+                AST_tree_free(node->id_node); 
+                AST_tree_free(node->exp); 
             }
             break; 
         default: 

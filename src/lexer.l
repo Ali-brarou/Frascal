@@ -58,6 +58,8 @@ ID [a-z_][a-z0-9_]*
 ","             {return TOKEN(T_COMMA);}
 "("             {return TOKEN(T_LPAREN);}
 ")"             {return TOKEN(T_RPAREN);}
+"["             {return TOKEN(T_LBRACK);}
+"]"             {return TOKEN(T_RBRACK);}
 "@"             {return TOKEN(T_AT);}
 "si"            {return TOKEN(T_IF);}
 "sinon"         {return TOKEN(T_ELSE);}

@@ -26,7 +26,6 @@ int main(int argc, char*argv[])
         }
     }
 
-
     /* compiler init */ 
     code_gen_init(); /* codegen */  
 

@@ -34,8 +34,6 @@ bool type_equal(Type* type_a, Type* type_b)
         case TYPE_PRIMITIVE: 
             return ((Primitive_type*)type_a)->val_type 
                                     == ((Primitive_type*)type_b)->val_type; 
-        case TYPE_ARRAY: 
-            return false;
         default: 
             return false; 
     }
@@ -65,7 +63,16 @@ Type* type_function_create(Type* return_type, Type** param_types, size_t param_c
     return (Type*) type; 
 }
 
-Type* type_named_create(Type* actual_type); 
+Type* type_array_create(Type* elem_type, size_t arr_size)
+{
+    Array_type* type = malloc(sizeof(Array_type)); 
+
+    type->kind = TYPE_ARRAY; 
+    type->element_type = elem_type; 
+    type->size = arr_size; 
+
+    return (Type*)type; 
+}
 
 void type_free(Type* type)
 {
@@ -89,6 +96,12 @@ void type_free(Type* type)
                 }
                 free(fn_type->param_types); 
             }
+            }
+            break; 
+        case TYPE_ARRAY: 
+            {
+                Array_type* arr_type = (Array_type*)type; 
+                type_free(arr_type->element_type); 
             }
             break; 
         default: 
@@ -246,6 +259,9 @@ Type* type_resolve_assign(Type* dest, Type* exp)
     if (!dest || !exp)
         type_error("paramaters are null"); 
 
+    if (!TYPE_IS_PRIMITIVE(dest) || !TYPE_IS_PRIMITIVE(exp))
+        type_error("can't use assignement to non primitive types");
+
     if (type_equal(dest, exp))
         return dest;
 
@@ -265,24 +281,34 @@ Type* type_resolve_assign(Type* dest, Type* exp)
 
 LLVMTypeRef type_to_llvm_type(Type* type)
 {
-    if (!TYPE_IS_PRIMITIVE(type))
+    switch (type->kind)
     {
+        case TYPE_PRIMITIVE: 
+        switch (((Primitive_type*)type) -> val_type)
+        {
+            case VAL_INT:
+                return LLVMInt32Type();
+            case VAL_FLOAT:
+                return LLVMFloatType();
+            case VAL_BOOL:
+                return LLVMInt1Type();
+            case VAL_CHAR:
+                return LLVMInt8Type();
+            default:
+                fprintf(stderr, "Error: bad type\n");
+                exit(3);
+        }
+        break; 
+        case TYPE_ARRAY: 
+        {
+            Array_type* arr_type = (Array_type*)type; 
+            LLVMTypeRef elem_llvm_type = type_to_llvm_type(arr_type->element_type); 
+            return LLVMArrayType(elem_llvm_type, arr_type->size); 
+        }
+        break; 
+        default: 
         fprintf(stderr, "not implemented yet\n");
         exit(3);
-    }
-    switch (((Primitive_type*)type) -> val_type)
-    {
-        case VAL_INT:
-            return LLVMInt32Type();
-        case VAL_FLOAT:
-            return LLVMFloatType();
-        case VAL_BOOL:
-            return LLVMInt1Type();
-        case VAL_CHAR:
-            return LLVMInt8Type();
-        default:
-            fprintf(stderr, "Error: bad type\n");
-            exit(3);
     }
     return NULL;
 }

@@ -26,7 +26,6 @@ typedef union Const_value_u {
 typedef enum Type_kind_e {
     TYPE_PRIMITIVE, 
     TYPE_FUNCTION, 
-    TYPE_NAMED,  /* new types */ 
     TYPE_ARRAY, 
 } Type_kind; 
 
@@ -37,7 +36,7 @@ typedef struct Type_s {
 typedef struct Array_type_s {
     Type_kind kind; 
     
-    size_t length;   
+    size_t size;   
     Type* element_type; 
 } Array_type; 
 
@@ -55,13 +54,6 @@ typedef struct Primitive_type_s {
     
     Value_type val_type; 
 } Primitive_type;  
-
-/* symbol table has the ownership */
-typedef struct Named_type_s {
-    Type_kind kind; 
-    
-    Type* actual_type;  
-} Name_type;
 
 typedef enum Op_e {
     //arithmatique
@@ -83,7 +75,6 @@ typedef enum Op_e {
     OP_OR, 
     OP_AND, 
     OP_NOT, 
-
 } Op_type; 
 
 /* an ugly solution for ownership of the primitive types (singeltons) */ 
@@ -99,9 +90,10 @@ bool type_equal(Type* type_a, Type* type_b);
 
 #define TYPE_IS_PRIMITIVE(t) ((t)->kind == TYPE_PRIMITIVE)
 Type* type_primitive_create(Value_type val_type); 
-/* warning: the array will be copied */ 
+/* warning: the params array will be copied */ 
 Type* type_function_create(Type* return_type, Type** param_types, size_t param_count);
-Type* type_named_create(Type* actual_type); 
+#define TYPE_IS_ARRAY(t) ((t)->kind == TYPE_ARRAY)
+Type* type_array_create(Type* elem_type, size_t arr_size); 
 void type_free(Type* type);  
 
 bool op_rel(Op_type op); /* check whether an operation is a relational operation */
