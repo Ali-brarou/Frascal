@@ -1,24 +1,31 @@
 TDNT 
-    table = tableau de 10 entier
-fonction who(x: entier): entier
+    table = tableau de 10 reel 
+    table2 = tableau de 20 table
+(* the table will be copied *)
+fonction who(x: table): entier
+TDOL
+    i: entier
 debut
-    retourner x * x
+    pour i de 0 a 9 faire 
+        ecrire(x[i])
+        x[i] := i 
+        ecrire(x[i])
+    fin pour
+    retourner 0 
 fin 
 TDOG
     i: entier
     who: entier
     test: table 
+    bruh: table2
 debut
-    who := who(-2*2)
-    ecrire(who)
-    pour i de 0 a 10 faire
-        test[i] := who(i)
+    pour i de 0 a 9 faire
+        test[i] := -i*i
         ecrire(test[i])
     fin pour 
-    ecrire(test[test[2]])
-    pour i de 0 a 5 faire
-        ecrire(chr(90), 3)
-        ecrire(2.3934234234)
-        ecrire(ent(-2.3934234234))
-    fin pour
+    who := who(test)
+    pour i de 0 a 9 faire
+        ecrire(test[i])
+    fin pour 
+    ecrire(test[ent(test[2])])
 fin

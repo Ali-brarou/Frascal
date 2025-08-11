@@ -124,7 +124,7 @@ typedef struct AST_array_type_decl_node_s {
     Node_type type; 
     
     AST_node* id_node; 
-    Type* element_type; 
+    AST_node* element_type; 
     size_t size; 
 } AST_array_type_decl_node; 
 
@@ -277,7 +277,7 @@ AST_node *ast_type_create_from_type(Type* type);
 AST_node *ast_type_create_from_name(char* name); 
 AST_node *ast_ntype_decls_node_create(AST_node* ntype_decl_node); 
 void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_decl_node); 
-AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, Type* elem_type);
+AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, AST_node* elem_type);
 
 //declarations
 AST_node *ast_var_decl_node_create(AST_node* id_type, AST_node* id_node); 

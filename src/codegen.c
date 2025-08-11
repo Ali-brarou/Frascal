@@ -559,7 +559,6 @@ static void code_gen_for_stmt(AST_node* root)
 
     //finished the loop 
     LLVMPositionBuilderAtEnd(builder, for_end);
-    
 }
 
 static void code_gen_while_stmt(AST_node* root)
@@ -920,7 +919,8 @@ static void code_gen_new_array_types(AST_node* new_array_type)
         return; 
     assert(new_array_type->type == NODE_ARRAY_TYPE_DECL); 
     AST_array_type_decl_node* node = (AST_array_type_decl_node*)new_array_type; 
-    Type* arr_type = type_array_create(node->element_type, node->size); 
+    Type* element_type = resolve_type(node->element_type); 
+    Type* arr_type = type_array_create(element_type, node->size); 
     if (st_insert_type(global_sym_tab, ((AST_id_node*)node->id_node)->id_str, arr_type) == ST_ALREADY_DECLARED)
     {
         fprintf(stderr, "Error : type %s declared twice\n",((AST_id_node*)node)->id_str); 

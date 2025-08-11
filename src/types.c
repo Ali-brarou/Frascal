@@ -74,6 +74,7 @@ Type* type_array_create(Type* elem_type, size_t arr_size)
     return (Type*)type; 
 }
 
+/* this should be called during sym tables freeing so recursing is not needed */ 
 void type_free(Type* type)
 {
     if (!type || type_is_singelton(type))
@@ -87,12 +88,12 @@ void type_free(Type* type)
         case TYPE_FUNCTION: 
             {
             Function_type* fn_type = (Function_type*)type; 
-            type_free(fn_type->return_type); 
+            //type_free(fn_type->return_type); 
             if (fn_type->param_types)
             {
                 for (size_t i = 0; i < fn_type->param_count; i++)
                 {
-                    type_free(fn_type->param_types[i]);
+                    //type_free(fn_type->param_types[i]);
                 }
                 free(fn_type->param_types); 
             }
@@ -100,8 +101,8 @@ void type_free(Type* type)
             break; 
         case TYPE_ARRAY: 
             {
-                Array_type* arr_type = (Array_type*)type; 
-                type_free(arr_type->element_type); 
+                //Array_type* arr_type = (Array_type*)type; 
+                //type_free(arr_type->element_type); 
             }
             break; 
         default: 

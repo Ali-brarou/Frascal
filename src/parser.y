@@ -28,7 +28,6 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
     int tok; 
     char* str; //for identifiers 
     Const_value val; 
-    Type* type; 
 }
 
 %token <str> T_IDENTIFIER 
@@ -63,8 +62,6 @@ return_stmt call_fn arr_sub type_ref lvalue
 %right T_NOT 
 %left T_LPAREN T_RPAREN
 
-%nonassoc PREC_CALL
-
 %start program
 
 %define parse.error verbose
@@ -78,9 +75,10 @@ return_stmt call_fn arr_sub type_ref lvalue
     TDNT: T_TDNT new_type_decls {$$ = $2;}
         | T_TDNT {$$ = NULL;} /*empty tdnt */ 
 
-    new_type_decls: array_type_decl {$$ = ast_ntype_decls_node_create($1);}
+    new_type_decls: new_type_decls array_type_decl {ast_ntype_decls_node_insert($1, $2);}
+        | array_type_decl {$$ = ast_ntype_decls_node_create($1);}
 
-    array_type_decl: id_ref T_EQ T_ARRAY T_DE T_INTEGER T_TYPEINT {$$ = ast_ntype_array_node_create($1, $5.ival, TYPE_INT);}
+    array_type_decl: id_ref T_EQ T_ARRAY T_DE T_INTEGER type_ref {$$ = ast_ntype_array_node_create($1, $5.ival, $6);}
 
     optional_subprogram_defs: subprogram_defs {$$ = $1;} 
         | /*empty*/ {$$ = NULL;} 

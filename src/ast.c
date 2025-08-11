@@ -134,7 +134,7 @@ void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_dec
     LL_insert_back(((AST_ntype_decls_node*) ntype_decls_node) -> new_type_decls_list, ntype_decl_node); 
 }
 
-AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, Type* elem_type)
+AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, AST_node* elem_type)
 {
     NODE_CREATE(node, AST_array_type_decl_node, NODE_ARRAY_TYPE_DECL); 
 
@@ -460,6 +460,7 @@ void AST_tree_free(void* tree)
             {
                 AST_array_type_decl_node* node = (AST_array_type_decl_node*)root_node; 
                 AST_tree_free(node->id_node); 
+                AST_tree_free(node->element_type); 
             }
             break; 
         case NODE_DECLARATIONS: 

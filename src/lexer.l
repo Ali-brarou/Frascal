@@ -82,8 +82,8 @@ ID [a-z_][a-z0-9_]*
 "fin"           {return TOKEN(T_END);}
 "retourner"     {return TOKEN(T_RETURN);}
 "TDNT"          {return TOKEN(T_TDNT);}
-"TDOL"           {return TOKEN(T_TDOL);}
-"TDOG"           {return TOKEN(T_TDOG);}
+"TDOL"          {return TOKEN(T_TDOL);}
+"TDOG"          {return TOKEN(T_TDOG);}
 "entier"        {return TOKEN(T_TYPEINT);}
 "reel"          {return TOKEN(T_TYPEFLOAT);}
 "booleen"       {return TOKEN(T_TYPEBOOL);}
