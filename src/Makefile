@@ -1,8 +1,8 @@
 CC 		:= gcc
-CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` -fsanitize=address 
-LDFLAGS	:= `llvm-config --libs core` 
+CFLAGS	:= -Wall -Wextra -g `llvm-config --cflags` -I. -Icodegen -fsanitize=address  
+LDFLAGS	:= `llvm-config --libs core` -fsanitize=address 
 
-SRC := main.c lexer.c parser.c ast.c linkedlist.c codegen.c symboltable.c types.c builtins.c 
+SRC := main.c lexer.c parser.c ast.c linkedlist.c codegen/codegen.c codegen/codegen_statement.c codegen/codegen_expression.c codegen/codegen_type.c codegen/codegen_subprogram.c symboltable.c types.c builtins.c 
 
 TARGET := frascal
 

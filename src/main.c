@@ -26,15 +26,17 @@ int main(int argc, char*argv[])
         }
     }
 
+    Codegen_ctx codegen_ctx; 
+
     /* compiler init */ 
-    code_gen_init(); /* codegen */  
+    code_gen_init(&codegen_ctx); /* codegen */  
 
     yyparse(); 
-    code_gen_ir(program_node);
+    code_gen_ir(&codegen_ctx, program_node);
     /* debug */ 
     /* AST_tree_print(program_node, 0); */ 
     
     AST_tree_free(program_node); 
-    code_gen_cleanup();  
+    code_gen_cleanup(&codegen_ctx);  
     return 0; 
 }
