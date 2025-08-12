@@ -10,7 +10,7 @@ Primitive_type type_primitives[VAL_CHAR + 1] = {
 
 bool type_is_singelton(Type* type)
 {
-    for (int val_type = 0; val_type <= VAL_TYPE_LAST; val_type++)
+    for (int val_type = 0; val_type < VAL_TYPE_NB; val_type++)
     {
         if (type == (Type*)&type_primitives[val_type])
             return true; 

@@ -7,7 +7,7 @@
 #include <string.h> 
 #include <llvm-c/Core.h>
 
-#define VAL_TYPE_LAST VAL_CHAR
+#define VAL_TYPE_NB 5
 typedef enum Value_type_e {
     VAL_ERR = 0, 
     VAL_INT , 
@@ -78,7 +78,7 @@ typedef enum Op_e {
 } Op_type; 
 
 /* an ugly solution for ownership of the primitive types (singeltons) */ 
-extern Primitive_type type_primitives[VAL_TYPE_LAST + 1]; 
+extern Primitive_type type_primitives[VAL_TYPE_NB]; 
 #define TYPE_INT    ((Type*)&type_primitives[VAL_INT])
 #define TYPE_FLOAT  ((Type*)&type_primitives[VAL_FLOAT])
 #define TYPE_BOOL   ((Type*)&type_primitives[VAL_BOOL])

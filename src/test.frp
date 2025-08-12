@@ -1,6 +1,6 @@
 TDNT 
     table = tableau de 10 reel 
-    table2 = tableau de 20 table
+    table2 = tableau de 30 caractere
 (* the table will be copied *)
 fonction who(x: table): entier
 TDOL
@@ -27,5 +27,21 @@ debut
     pour i de 0 a 9 faire
         ecrire(test[i])
     fin pour 
-    ecrire(test[ent(test[2])])
+    si (0 = 0) alors 
+    debut 
+        ecrire(3)
+    fin
+    sinon
+    debut 
+        ecrire(3)
+    fin
+    finsi 
+    i := 1
+    bruh[0] := 'a'
+    ecrire(bruh[0])
+    tant que (i <= (ord('z') - ord('a'))) faire 
+        bruh[i] := chr(ord(bruh[i-1]) + 1)
+        ecrire(bruh[i])
+        i := i + 1
+    fin tant que
 fin

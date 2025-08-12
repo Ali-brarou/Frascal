@@ -1,5 +1,5 @@
 %debug
-%glr-parser /* glr can handle if stmt grammar that LR(1) couldn't handle*/ 
+%glr-parser
 %{
 #include "types.h"
 #include "ast.h"
@@ -11,7 +11,7 @@ AST_node* program_node = NULL; //main program node
 extern int yylex(); 
 void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);} 
 
-#define YYMAXDEPTH 10000 /*bigger stack size*/ 
+//#define YYMAXDEPTH 10000 /*bigger stack size*/ 
 //int yydebug = 1; /*enable debugging*/ 
 %}
 
@@ -43,8 +43,8 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
 
 // defining non terminals
-%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif_branches optional_elif_branches optional_else_branch fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDOG optional_TDOG optional_TDOL TDOL TDNT optional_TDNT optional_subprogram_defs subprogram_defs subprogram_def function_def optional_params params param print_stmt optional_args args arg
-return_stmt call_fn arr_sub type_ref lvalue
+%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif optional_elif optional_else fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDOG optional_TDOG optional_TDOL TDOL TDNT optional_TDNT optional_subprogram_defs subprogram_defs subprogram_def function_def optional_params params param print_stmt optional_args args arg
+return_stmt call_fn arr_sub type_ref lvalue statement_block
 
 
 //precedences 
@@ -88,7 +88,7 @@ return_stmt call_fn arr_sub type_ref lvalue
 
     subprogram_def: function_def {$$ = $1;}
 
-    function_def: T_FUNC id_ref T_LPAREN optional_params T_RPAREN T_COLON type_ref optional_TDOL T_BEGIN optional_statements T_END {$$ = ast_function_create($2,$4,$8,$10,$7);}
+    function_def: T_FUNC id_ref T_LPAREN optional_params T_RPAREN T_COLON type_ref optional_TDOL statement_block {$$ = ast_function_create($2,$4,$8,$9,$7);}
 
     optional_params: params {$$ = $1;}
         | /*empty*/ {$$ = NULL;}
@@ -138,12 +138,13 @@ return_stmt call_fn arr_sub type_ref lvalue
                 | T_CHAR    {$$ = ast_const_node_create(VAL_CHAR, $1);}
 
 
-
     optional_statements : statements {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
 
     statements: statements statement {ast_statements_node_insert($1, $2);}
                 | statement     {$$ = ast_statements_node_create($1);} 
+
+    statement_block: T_BEGIN optional_statements T_END {$$ = $2;}
     
     statement: assignment {$$ = $1;}
                 | if_stmt {$$ = $1;}
@@ -155,19 +156,19 @@ return_stmt call_fn arr_sub type_ref lvalue
 
     assignment: lvalue T_ASSIGN expression {$$ = ast_assign_node_create($1, $3);}
 
-    if_stmt: T_IF expression T_THEN optional_statements optional_elif_branches optional_else_branch T_ENDIF {$$ = ast_if_node_create($2, $4, $5, $6);}
+    if_stmt: T_IF expression T_THEN statement_block optional_elif optional_else T_ENDIF {$$ = ast_if_node_create($2, $4, $5, $6);}
 
-    optional_elif_branches: elif_branches {$$ = $1;}
+    optional_elif: elif {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
 
-    elif_branches: elif_branches T_ELSE T_IF expression T_THEN optional_statements {
+    elif: elif T_ELSE T_IF expression T_THEN statement_block{
                     ast_elif_node_insert($1, ast_branch_node_create($4, $6)); 
                     }
-                | T_ELSE T_IF expression T_THEN optional_statements {
+                | T_ELSE T_IF expression T_THEN statement_block{
                     $$ = ast_elif_node_create(ast_branch_node_create($3, $5)); 
                     }
 
-    optional_else_branch: T_ELSE optional_statements {$$ = $2;}
+    optional_else: T_ELSE statement_block {$$ = $2;}
                 | /*empty*/ {$$ = NULL;}
 
     for_loop_stmt: T_FOR id_ref T_DE expression T_TO expression T_DO optional_statements T_ENDFOR {$$ = ast_for_node_create($2, $4, $6, $8);}

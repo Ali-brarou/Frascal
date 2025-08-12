@@ -1,19 +1,17 @@
-add arrays 
+add procedures 
 
-add struct 
+clean more code 
 
 add 2d arrays
 
-add classes (constructor and deconstructors)
+add struct 
 
-add ecrire and lire 
+add lire 
+
+add error handling
 
 write a disambiguated if else statement 
 
-clean code
-
 add tests
-
-add error handling
 
 add optimization and generate binary 
