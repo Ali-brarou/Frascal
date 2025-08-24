@@ -145,6 +145,18 @@ AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, AST_no
     return (AST_node*)node; 
 }
 
+AST_node *ast_ntype_matrix_node_create(AST_node* id_node, size_t rows, size_t cols, AST_node* elem_type)
+{
+    NODE_CREATE(node, AST_matrix_type_decl_node, NODE_MATRIX_TYPE_DECL); 
+
+    node -> id_node = id_node; 
+    node -> element_type = elem_type; 
+    node -> size[0] = rows; 
+    node -> size[1] = cols; 
+
+    return (AST_node*) node; 
+}
+
 AST_node *ast_decls_node_create(AST_node* decl)
 {
     NODE_CREATE(node, AST_declarations_node, NODE_DECLARATIONS); 
@@ -327,6 +339,11 @@ Type* ast_exp_type(AST_node* exp_node)
                 AST_arr_sub_node* node = (AST_arr_sub_node*) exp_node; 
                 return node->elem_type; 
             }
+        case NODE_MAT_SUB: 
+            {
+                AST_mat_sub_node* node = (AST_mat_sub_node*) exp_node; 
+                return node->elem_type; 
+            }
         default: 
             fprintf(stderr,"Error : ast node is not an expression\n"); 
             exit(3);
@@ -383,6 +400,17 @@ AST_node *ast_arr_sub_create(AST_node* id_node, AST_node* exp)
 
     node -> id_node = id_node; 
     node -> exp = exp; 
+
+    return (AST_node*) node; 
+}
+
+AST_node *ast_mat_sub_create(AST_node* id_node, AST_node* exp_row, AST_node* exp_col)
+{
+    NODE_CREATE(node, AST_mat_sub_node, NODE_MAT_SUB); 
+
+    node -> id_node = id_node; 
+    node -> exp[0] = exp_row; 
+    node -> exp[1] = exp_col; 
 
     return (AST_node*) node; 
 }
@@ -459,6 +487,13 @@ void AST_tree_free(void* tree)
         case NODE_ARRAY_TYPE_DECL: 
             {
                 AST_array_type_decl_node* node = (AST_array_type_decl_node*)root_node; 
+                AST_tree_free(node->id_node); 
+                AST_tree_free(node->element_type); 
+            }
+            break; 
+        case NODE_MATRIX_TYPE_DECL: 
+            {
+                AST_matrix_type_decl_node* node = (AST_matrix_type_decl_node*)root_node; 
                 AST_tree_free(node->id_node); 
                 AST_tree_free(node->element_type); 
             }
@@ -583,6 +618,14 @@ void AST_tree_free(void* tree)
                 AST_arr_sub_node* node = (AST_arr_sub_node*)root_node; 
                 AST_tree_free(node->id_node); 
                 AST_tree_free(node->exp); 
+            }
+            break; 
+        case NODE_MAT_SUB: 
+            {
+                AST_mat_sub_node* node = (AST_mat_sub_node*)root_node; 
+                AST_tree_free(node->id_node); 
+                AST_tree_free(node->exp[0]); 
+                AST_tree_free(node->exp[1]); 
             }
             break; 
         default: 

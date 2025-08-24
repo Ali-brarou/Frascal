@@ -1,47 +1,13 @@
 TDNT 
-    table = tableau de 10 reel 
-    table2 = tableau de 30 caractere
-(* the table will be copied *)
-fonction who(x: table): entier
-TDOL
-    i: entier
-debut
-    pour i de 0 a 9 faire 
-        ecrire(x[i])
-        x[i] := i 
-        ecrire(x[i])
-    fin pour
-    retourner 0 
-fin 
+    matrix = tableau de 9 * 3 entier
 TDOG
+    y: matrix 
     i: entier
-    who: entier
-    test: table 
-    bruh: table2
+    j: entier
 debut
-    pour i de 0 a 9 faire
-        test[i] := -i*i
-        ecrire(test[i])
-    fin pour 
-    who := who(test)
-    pour i de 0 a 9 faire
-        ecrire(test[i])
-    fin pour 
-    si (0 = 0) alors 
-    debut 
-        ecrire(3)
-    fin
-    sinon
-    debut 
-        ecrire(3)
-    fin
-    finsi 
-    i := 1
-    bruh[0] := 'a'
-    ecrire(bruh[0])
-    tant que (i <= (ord('z') - ord('a'))) faire 
-        bruh[i] := chr(ord(bruh[i-1]) + 1)
-        ecrire(bruh[i])
-        i := i + 1
-    fin tant que
+    pour i de 0 a 8 faire
+        pour j de 0 a 2 faire 
+            y[i, j] := 0
+        fin pour
+    fin pour
 fin

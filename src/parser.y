@@ -43,8 +43,8 @@ void yyerror(const char *s) {fprintf(stderr, "\033[31mError: %s\n", s); exit(2);
 
 
 // defining non terminals
-%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif optional_elif optional_else fun_declaration var_declaration declaration declarations new_type_decls array_type_decl TDOG optional_TDOG optional_TDOL TDOL TDNT optional_TDNT optional_subprogram_defs subprogram_defs subprogram_def function_def optional_params params param print_stmt optional_args args arg
-return_stmt call_fn arr_sub type_ref lvalue statement_block
+%type <node> program optional_statements statements statement assignment for_loop_stmt while_loop_stmt dowhile_loop_stmt expression const_value id_ref if_stmt elif optional_elif optional_else fun_declaration var_declaration declaration declarations new_type_decls new_type_decl array_type_decl matrix_type_decl TDOG optional_TDOG optional_TDOL TDOL TDNT optional_TDNT optional_subprogram_defs subprogram_defs subprogram_def function_def optional_params params param print_stmt optional_args args arg
+return_stmt call_fn arr_sub mat_sub type_ref lvalue statement_block
 
 
 //precedences 
@@ -67,7 +67,7 @@ return_stmt call_fn arr_sub type_ref lvalue statement_block
 %define parse.error verbose
 
 %%
-    program : optional_TDNT optional_subprogram_defs optional_TDOG T_BEGIN optional_statements T_END {program_node = ast_program_create($1, $2, $3, $5);}
+    program : optional_TDNT optional_subprogram_defs optional_TDOG statement_block {program_node = ast_program_create($1, $2, $3, $4);}
 
     optional_TDNT: TDNT {$$ = $1;}
                 | /*empty*/ {$$ = NULL;}
@@ -75,10 +75,15 @@ return_stmt call_fn arr_sub type_ref lvalue statement_block
     TDNT: T_TDNT new_type_decls {$$ = $2;}
         | T_TDNT {$$ = NULL;} /*empty tdnt */ 
 
-    new_type_decls: new_type_decls array_type_decl {ast_ntype_decls_node_insert($1, $2);}
-        | array_type_decl {$$ = ast_ntype_decls_node_create($1);}
+    new_type_decls: new_type_decls new_type_decl {ast_ntype_decls_node_insert($1, $2);}
+        | new_type_decl {$$ = ast_ntype_decls_node_create($1);}
+
+    new_type_decl: array_type_decl {$$ = $1;}
+        | matrix_type_decl {$$ = $1;}
 
     array_type_decl: id_ref T_EQ T_ARRAY T_DE T_INTEGER type_ref {$$ = ast_ntype_array_node_create($1, $5.ival, $6);}
+    
+    matrix_type_decl: id_ref T_EQ T_ARRAY T_DE T_INTEGER T_MULT T_INTEGER type_ref {$$ = ast_ntype_matrix_node_create($1, $5.ival, $7.ival, $8);}
 
     optional_subprogram_defs: subprogram_defs {$$ = $1;} 
         | /*empty*/ {$$ = NULL;} 
@@ -123,6 +128,7 @@ return_stmt call_fn arr_sub type_ref lvalue statement_block
 
     lvalue: id_ref {$$ = $1;}
         | arr_sub {$$ = $1;}
+        | mat_sub {$$ = $1;}
 
     id_ref: T_IDENTIFIER {$$ = ast_id_node_create($1);}
 
@@ -193,8 +199,11 @@ return_stmt call_fn arr_sub type_ref lvalue statement_block
 
     arr_sub: id_ref T_LBRACK expression T_RBRACK {$$ = ast_arr_sub_create($1, $3);}
 
+    mat_sub: id_ref T_LBRACK expression T_COMMA expression T_RBRACK {$$ = ast_mat_sub_create($1, $3, $5);}
+
     expression: call_fn {$$ = $1;} 
                 | arr_sub {$$ = $1;}
+                | mat_sub {$$ = $1;}
                 | id_ref{$$ = $1;}
                 | const_value {$$ = $1;}
                 | expression T_PLUS expression {$$ = ast_op_node_create(OP_ADD, $1, $3);}

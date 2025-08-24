@@ -41,9 +41,23 @@ LLVMValueRef code_gen_lval(Codegen_ctx *ctx, AST_node* lval);
 /* type */ 
 LLVMValueRef code_gen_promote(Codegen_ctx *ctx, LLVMValueRef value, Type* val_type, Type* dest_type);
 Type* code_gen_resolve_type(Codegen_ctx* ctx, AST_node* type); 
+void code_gen_new_types(Codegen_ctx *ctx, AST_node* new_types); 
 
+/* helper functions */ 
 St_entry* find_var(Codegen_ctx *ctx, char * name);
 St_entry* find_fun(Codegen_ctx *ctx, char * name, Type** args, size_t args_count);
 void code_gen_populate_st(Codegen_ctx *ctx, AST_node* decls);
+static inline bool is_block_terminated(Codegen_ctx *ctx)
+{
+    LLVMBasicBlockRef current_block = LLVMGetInsertBlock(ctx->builder); 
+    if (!current_block)
+        return false; 
+
+    LLVMValueRef last_inst = LLVMGetLastInstruction(current_block); 
+    if (!last_inst)
+        return false; 
+
+    return LLVMIsATerminatorInst(last_inst) != NULL; 
+}
 
 #endif

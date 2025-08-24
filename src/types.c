@@ -74,6 +74,18 @@ Type* type_array_create(Type* elem_type, size_t arr_size)
     return (Type*)type; 
 }
 
+Type* type_matrix_create(Type* elem_type, size_t size_row, size_t size_col)
+{
+    Matrix_type* type = malloc(sizeof(Matrix_type)); 
+
+    type->kind = TYPE_MATRIX; 
+    type->element_type = elem_type; 
+    type->size[0] = size_row; 
+    type->size[1] = size_col; 
+
+    return (Type*)type; 
+}
+
 /* this should be called during sym tables freeing so recursing is not needed */ 
 void type_free(Type* type)
 {
@@ -82,9 +94,6 @@ void type_free(Type* type)
 
     switch (type->kind)
     {
-        case TYPE_PRIMITIVE: 
-            //do nothing 
-            break; 
         case TYPE_FUNCTION: 
             {
             Function_type* fn_type = (Function_type*)type; 
@@ -99,11 +108,9 @@ void type_free(Type* type)
             }
             }
             break; 
+        case TYPE_PRIMITIVE: 
+        case TYPE_MATRIX: 
         case TYPE_ARRAY: 
-            {
-                //Array_type* arr_type = (Array_type*)type; 
-                //type_free(arr_type->element_type); 
-            }
             break; 
         default: 
             fprintf(stderr, "not implemented yet\n"); 
@@ -305,6 +312,14 @@ LLVMTypeRef type_to_llvm_type(Type* type)
             Array_type* arr_type = (Array_type*)type; 
             LLVMTypeRef elem_llvm_type = type_to_llvm_type(arr_type->element_type); 
             return LLVMArrayType(elem_llvm_type, arr_type->size); 
+        }
+        break; 
+        case TYPE_MATRIX: 
+        {
+            Matrix_type* mat_type = (Matrix_type*)type; 
+            LLVMTypeRef elem_llvm_type = type_to_llvm_type(mat_type->element_type); 
+            LLVMTypeRef inner = LLVMArrayType(elem_llvm_type, mat_type->size[1]); 
+            return LLVMArrayType(inner, mat_type->size[0]); 
         }
         break; 
         default: 

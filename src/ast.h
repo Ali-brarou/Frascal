@@ -21,7 +21,9 @@ typedef enum Node_type_e {
     //new types 
     NODE_TYPE, 
     NODE_NEW_TYPE_DECLS,
+    /* I am thinking of implementing a general array type to hold more than 2d arrays */ 
     NODE_ARRAY_TYPE_DECL,  
+    NODE_MATRIX_TYPE_DECL,  
     //declarations
     NODE_DECLARATIONS, 
     NODE_VAR_DECLARATION, 
@@ -43,6 +45,7 @@ typedef enum Node_type_e {
     NODE_ID, 
     NODE_CALL, 
     NODE_ARR_SUB, 
+    NODE_MAT_SUB, 
 
 } Node_type; 
 
@@ -127,6 +130,14 @@ typedef struct AST_array_type_decl_node_s {
     AST_node* element_type; 
     size_t size; 
 } AST_array_type_decl_node; 
+
+typedef struct AST_matrix_type_decl_node_s {
+    Node_type type; 
+    
+    AST_node* id_node; 
+    AST_node* element_type; 
+    size_t size[2]; 
+} AST_matrix_type_decl_node; 
 
 typedef struct AST_declarations_node_s {
     Node_type type; 
@@ -261,6 +272,15 @@ typedef struct AST_arr_sub_node_s {
 
 } AST_arr_sub_node; 
 
+typedef struct AST_mat_sub_node_s {
+    Node_type type; 
+
+    AST_node* exp[2];  
+    AST_node* id_node; 
+    Type* elem_type; /* during type resolution */ 
+
+} AST_mat_sub_node; 
+
 AST_node *ast_program_create(AST_node* new_types, AST_node* subprograms, AST_node* decls, AST_node* stmts); 
 AST_node *ast_subprograms_create(AST_node* subprogram); 
 void ast_subprograms_insert(AST_node* subprograms, AST_node* subprogram); 
@@ -278,6 +298,7 @@ AST_node *ast_type_create_from_name(char* name);
 AST_node *ast_ntype_decls_node_create(AST_node* ntype_decl_node); 
 void ast_ntype_decls_node_insert(AST_node* ntype_decls_node, AST_node* ntype_decl_node); 
 AST_node *ast_ntype_array_node_create(AST_node* id_node, size_t arr_size, AST_node* elem_type);
+AST_node *ast_ntype_matrix_node_create(AST_node* id_node, size_t rows, size_t cols, AST_node* elem_type);
 
 //declarations
 AST_node *ast_var_decl_node_create(AST_node* id_type, AST_node* id_node); 
@@ -309,6 +330,7 @@ AST_node *ast_const_node_create(Value_type val_type, Const_value val);
 AST_node *ast_id_node_create(char* id_str); 
 AST_node *ast_call_node_create(AST_node* id_node, AST_node* args); 
 AST_node *ast_arr_sub_create(AST_node* id_node, AST_node* exp); 
+AST_node *ast_mat_sub_create(AST_node* id_node, AST_node* exp_row, AST_node* exp_col); 
 
 void AST_tree_free(void* tree);
 

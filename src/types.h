@@ -27,11 +27,19 @@ typedef enum Type_kind_e {
     TYPE_PRIMITIVE, 
     TYPE_FUNCTION, 
     TYPE_ARRAY, 
+    TYPE_MATRIX, 
 } Type_kind; 
 
 typedef struct Type_s {
     Type_kind kind; 
 } Type; 
+
+typedef struct Matrix_type_s{
+    Type_kind kind; 
+    
+    size_t size[2];   
+    Type* element_type; 
+} Matrix_type; 
 
 typedef struct Array_type_s {
     Type_kind kind; 
@@ -94,6 +102,8 @@ Type* type_primitive_create(Value_type val_type);
 Type* type_function_create(Type* return_type, Type** param_types, size_t param_count);
 #define TYPE_IS_ARRAY(t) ((t)->kind == TYPE_ARRAY)
 Type* type_array_create(Type* elem_type, size_t arr_size); 
+#define TYPE_IS_MATRIX(t) ((t)->kind == TYPE_MATRIX)
+Type* type_matrix_create(Type* elem_type, size_t size_row, size_t size_col); 
 void type_free(Type* type);  
 
 bool op_rel(Op_type op); /* check whether an operation is a relational operation */

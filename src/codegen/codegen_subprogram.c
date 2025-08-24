@@ -1,16 +1,57 @@
 #include <codegen.h> 
+
 static void code_gen_function(Codegen_ctx *ctx, AST_node* function); 
+static Type* create_function_type(Codegen_ctx *ctx, AST_function_node* function, Type** param_types, size_t params_count); 
+static LLVMValueRef create_function(Codegen_ctx *ctx, 
+                            AST_function_node* fn, 
+                            Type** param_types, 
+                            LLVMTypeRef* llvm_param_types, 
+                            size_t params_count); 
 
 void code_gen_subprograms(Codegen_ctx *ctx, AST_node* subprograms)
 {
     if (!subprograms)
         return;
+
     AST_subprograms_node* node = (AST_subprograms_node*)subprograms;
     LL_FOR_EACH(node->functions_list, ll_node)
     {
         AST_node* fn_node = ll_node->data;
         code_gen_function(ctx, fn_node);
     }
+}
+
+static inline Type* create_function_type(Codegen_ctx *ctx, 
+                                  AST_function_node* fn, 
+                                  Type** param_types, 
+                                  size_t params_count)
+{
+    ctx->current_fn_ret_type = code_gen_resolve_type(ctx, fn->ret_type);
+    return type_function_create(ctx->current_fn_ret_type, param_types, params_count);
+
+}
+
+static LLVMValueRef create_function(Codegen_ctx *ctx, 
+                            AST_function_node* fn, 
+                            Type** param_types, 
+                            LLVMTypeRef* llvm_param_types, 
+                            size_t params_count) 
+{
+    char* fun_name = ((AST_id_node*)fn->id_node)->id_str;
+    Type* func_type = create_function_type(ctx, fn, param_types, params_count); 
+    LLVMTypeRef llvm_func_type
+        = LLVMFunctionType(type_to_llvm_type(ctx->current_fn_ret_type), 
+                           llvm_param_types, 
+                           params_count, 
+                           0);
+    LLVMValueRef func_ref= LLVMAddFunction(ctx->module, fun_name, llvm_func_type);
+    if (st_insert_fun(ctx->global_sym_tab, fun_name, func_type, func_ref, llvm_func_type)
+            == ST_ALREADY_DECLARED)
+    {
+            fprintf(stderr, "Error : function %s defined twice\n", fun_name);
+            exit(3);
+    }
+    return func_ref; 
 }
 
 static void code_gen_function(Codegen_ctx *ctx, AST_node* function)
@@ -24,39 +65,34 @@ static void code_gen_function(Codegen_ctx *ctx, AST_node* function)
     char** param_names = NULL;
     LLVMTypeRef* llvm_param_types = NULL;
 
-    /* iterate over every paramater */
     if (params != NULL)
     {
         params_count = LL_size(params->params_list);
         param_types = malloc(params_count * sizeof(Type*));
         param_names = malloc(params_count * sizeof(char*));
         llvm_param_types = malloc(params_count * sizeof(LLVMTypeRef));
+
         size_t index = 0;
+        /* iterate over every paramater */
         LL_FOR_EACH(params->params_list, ll_node)
         {
             AST_param_node* param = ll_node->data;
+
             param_names[index] = ((AST_id_node*)param->id_node)->id_str;
             Type* param_type = code_gen_resolve_type(ctx, param->id_type);
             param_types[index] = param_type;
             llvm_param_types[index] = type_to_llvm_type(param_types[index]);
+
             index++;
         }
     }
 
-
     /* create function type and insert it into the global symbol table */
-    char* fun_name = ((AST_id_node*)fn->id_node)->id_str;
-    ctx->current_fn_ret_type = code_gen_resolve_type(ctx, fn->ret_type);
-    Type* func_type = type_function_create(ctx->current_fn_ret_type, param_types, params_count);
-    LLVMTypeRef llvm_func_type
-        = LLVMFunctionType(type_to_llvm_type(ctx->current_fn_ret_type), llvm_param_types, params_count, 0);
-    LLVMValueRef func_ref= LLVMAddFunction(ctx->module, fun_name, llvm_func_type);
-    if (st_insert_fun(ctx->global_sym_tab, fun_name, func_type, func_ref, llvm_func_type)
-            == ST_ALREADY_DECLARED)
-    {
-            fprintf(stderr, "Error : function %s defined twice\n", fun_name);
-            exit(3);
-    }
+    LLVMValueRef func_ref = create_function(ctx, 
+                                            fn, 
+                                            param_types, 
+                                            llvm_param_types, 
+                                            params_count); 
 
     /* create a local symbol table */
     ctx->current_sym_tab = st_create();
@@ -78,7 +114,7 @@ static void code_gen_function(Codegen_ctx *ctx, AST_node* function)
     /* generate statments */
     code_gen_stmt(ctx, fn->statements);
 
-    if (!ctx->current_block_terminated)
+    if (!is_block_terminated(ctx))
     {
         fprintf(stderr, "Error: missing a return statement\n");
         exit(3);

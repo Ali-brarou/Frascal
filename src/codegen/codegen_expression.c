@@ -3,6 +3,7 @@
 static LLVMValueRef code_gen_op(Codegen_ctx *ctx, AST_node* root);
 static LLVMValueRef code_gen_call(Codegen_ctx *ctx, AST_node* root);
 static LLVMValueRef code_gen_arr_sub(Codegen_ctx *ctx, AST_node* root);
+static LLVMValueRef code_gen_mat_sub(Codegen_ctx *ctx, AST_node* root);
 
 static LLVMValueRef code_gen_op(Codegen_ctx *ctx, AST_node* root)
 {
@@ -162,20 +163,20 @@ static LLVMValueRef code_gen_call(Codegen_ctx *ctx, AST_node* root)
 
 static LLVMValueRef code_gen_arr_sub(Codegen_ctx *ctx, AST_node* root)
 {
-    AST_arr_sub_node* node = (AST_arr_sub_node*)root; 
-    /* find the array from the symbol table */ 
-    LLVMValueRef arr_ref = code_gen_lval(ctx, node->id_node); 
-    Type* arr_type = ast_exp_type(node->id_node); 
-    node->elem_type = ((Array_type*)arr_type)->element_type; 
-    LLVMTypeRef llvm_elem_type = type_to_llvm_type(node->elem_type); 
-    LLVMValueRef idx = code_gen_exp(ctx, node->exp); 
-    if (!type_equal(ast_exp_type(node->exp), TYPE_INT))
-    {
-        fprintf(stderr, "index must be an integer\n"); 
-        exit(3); 
-   }
-    LLVMValueRef elem_ptr = LLVMBuildGEP2(ctx->builder, llvm_elem_type, arr_ref, &idx, 1, "arr_sub_tem"); 
-    return LLVMBuildLoad2(ctx->builder, type_to_llvm_type(node->elem_type), elem_ptr, "loaded_elem"); 
+    LLVMValueRef elem_ptr = code_gen_lval(ctx, root); 
+    return LLVMBuildLoad2(ctx->builder, 
+            type_to_llvm_type(((AST_arr_sub_node*)root)->elem_type), 
+            elem_ptr, 
+            "loaded_elem"); 
+}
+
+static LLVMValueRef code_gen_mat_sub(Codegen_ctx *ctx, AST_node* root)
+{
+    LLVMValueRef elem_ptr = code_gen_lval(ctx, root); 
+    return LLVMBuildLoad2(ctx->builder, 
+            type_to_llvm_type(((AST_mat_sub_node*)root)->elem_type), 
+            elem_ptr, 
+            "loaded_elem"); 
 }
 
 LLVMValueRef code_gen_exp(Codegen_ctx *ctx, AST_node* root)
@@ -230,6 +231,8 @@ LLVMValueRef code_gen_exp(Codegen_ctx *ctx, AST_node* root)
             return code_gen_call(ctx, root); 
         case NODE_ARR_SUB: 
             return code_gen_arr_sub(ctx, root); 
+        case NODE_MAT_SUB: 
+            return code_gen_mat_sub(ctx, root); 
         default: 
             fprintf(stderr, "Error: bad ast node not an expression.\n"); 
             exit(3); 
@@ -264,16 +267,50 @@ LLVMValueRef code_gen_lval(Codegen_ctx *ctx, AST_node* root)
             AST_arr_sub_node* node = (AST_arr_sub_node*)root; 
             /* find the array from the symbol table */ 
             LLVMValueRef arr_ref = code_gen_lval(ctx, node->id_node); 
-            Type* arr_type = ast_exp_type(node->id_node); 
-            node->elem_type = ((Array_type*)arr_type)->element_type; 
-            LLVMTypeRef llvm_elem_type = type_to_llvm_type(node->elem_type); 
-            LLVMValueRef idx = code_gen_exp(ctx, node->exp); 
+            Array_type* arr_type = (Array_type*)ast_exp_type(node->id_node); 
+            if (!TYPE_IS_ARRAY((Type*)arr_type))
+            {
+                fprintf(stderr, "%s not an array\n", ((AST_id_node*)node->id_node)->id_str); 
+                exit(3); 
+            }
+            node->elem_type = arr_type->element_type; 
+            LLVMTypeRef llvm_arr_type = type_to_llvm_type((Type*)arr_type); 
+            LLVMValueRef zero = LLVMConstInt(LLVMInt32Type(), 0, false);
+            LLVMValueRef idx[2] = {zero, code_gen_exp(ctx, node->exp)}; 
             if (!type_equal(ast_exp_type(node->exp), TYPE_INT))
             {
                 fprintf(stderr, "index must be an integer\n"); 
                 exit(3); 
            }
-            return LLVMBuildGEP2(ctx->builder, llvm_elem_type, arr_ref, &idx, 1, "arr_sub_item"); 
+            return LLVMBuildGEP2(ctx->builder, llvm_arr_type, arr_ref, idx, 2, "arr_sub_item"); 
+        }
+        break; 
+        case NODE_MAT_SUB: 
+        {
+            AST_mat_sub_node* node = (AST_mat_sub_node*)root; 
+            /* find the matrix from the symbol table */ 
+            LLVMValueRef mat_ref = code_gen_lval(ctx, node->id_node); 
+            Matrix_type* mat_type = (Matrix_type*)ast_exp_type(node->id_node); 
+            if (!TYPE_IS_MATRIX((Type*)mat_type))
+            {
+                fprintf(stderr, "%s not a matrix\n", ((AST_id_node*)node->id_node)->id_str); 
+                exit(3); 
+            }
+            node->elem_type = mat_type->element_type;
+            LLVMTypeRef llvm_mat_type = type_to_llvm_type((Type*)mat_type); 
+            LLVMValueRef zero = LLVMConstInt(LLVMInt32Type(), 0, false);
+            LLVMValueRef idx[3] = {zero, code_gen_exp(ctx, node->exp[0]), code_gen_exp(ctx, node->exp[1])}; 
+            if (!type_equal(ast_exp_type(node->exp[0]), TYPE_INT))
+            {
+                fprintf(stderr, "index must be an integer\n"); 
+                exit(3); 
+           }
+            if (!type_equal(ast_exp_type(node->exp[1]), TYPE_INT))
+            {
+                fprintf(stderr, "index must be an integer\n"); 
+                exit(3); 
+           }
+            return LLVMBuildGEP2(ctx->builder, llvm_mat_type, mat_ref, idx, 3, "mat_sub_item"); 
         }
         break; 
         default: 
